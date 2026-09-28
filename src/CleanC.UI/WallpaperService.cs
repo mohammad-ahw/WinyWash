@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using Windows.Graphics.Imaging;
 using Windows.Storage;
 
@@ -11,10 +10,9 @@ namespace CleanC.UI
         private static bool? _isCachedDark = null;
         private static DateTime _lastCheck = DateTime.MinValue;
 
-        public static async Task<bool> IsWallpaperDarkAsync()
+        public static bool IsWallpaperDark(bool forceRefresh = false)
         {
-            // Cache result for 5 seconds to avoid repeated disk reads during frequent UI events
-            if (_isCachedDark.HasValue && (DateTime.Now - _lastCheck).TotalSeconds < 5)
+            if (!forceRefresh && _isCachedDark.HasValue && (DateTime.Now - _lastCheck).TotalSeconds < 3)
             {
                 return _isCachedDark.Value;
             }
@@ -55,11 +53,10 @@ namespace CleanC.UI
                     return false;
                 }
 
-                var file = await StorageFile.GetFileFromPathAsync(wallpaperPath);
-                using var stream = await file.OpenAsync(FileAccessMode.Read);
-                var decoder = await BitmapDecoder.CreateAsync(stream);
+                var file = StorageFile.GetFileFromPathAsync(wallpaperPath).AsTask().GetAwaiter().GetResult();
+                using var stream = file.OpenAsync(FileAccessMode.Read).AsTask().GetAwaiter().GetResult();
+                var decoder = BitmapDecoder.CreateAsync(stream).AsTask().GetAwaiter().GetResult();
 
-                // Sample down to a fast 16x16 thumbnail for instant luminance check
                 var transform = new BitmapTransform
                 {
                     ScaledWidth = 16,
@@ -67,12 +64,12 @@ namespace CleanC.UI
                     InterpolationMode = BitmapInterpolationMode.Linear
                 };
 
-                var pixelData = await decoder.GetPixelDataAsync(
+                var pixelData = decoder.GetPixelDataAsync(
                     BitmapPixelFormat.Rgba8,
                     BitmapAlphaMode.Premultiplied,
                     transform,
                     ExifOrientationMode.IgnoreExifOrientation,
-                    ColorManagementMode.DoNotColorManage);
+                    ColorManagementMode.DoNotColorManage).AsTask().GetAwaiter().GetResult();
 
                 byte[] pixels = pixelData.DetachPixelData();
                 double totalLuminance = 0;
@@ -94,8 +91,9 @@ namespace CleanC.UI
             }
             catch
             {
-                // Safe fallback: default to dark so white text remains readable over dark backgrounds
-                return true;
+                // Fallback to false (standard high-contrast black text in Light mode)
+                _isCachedDark = false;
+                return false;
             }
         }
     }

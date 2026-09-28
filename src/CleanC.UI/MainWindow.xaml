@@ -138,7 +138,7 @@
                                         <Ellipse Width="6" Height="6" Fill="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" />
                                         <TextBlock Text="وضعیت سلامت و کارایی سیستم" FontSize="11.5" FontWeight="Medium" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
-                                    <TextBlock x:Name="HeroHealthTitle" Text="سیستم آماده بهینه‌سازی است" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="HeroHealthTitle" Text="سیستم آماده بهینه‌سازی است" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     <TextBlock x:Name="HeroHealthSubtitle" Text="تنها با ۱ کلیک فایل‌های موقت پاک، حافظه رم آزاد و پردازه‌های اضافی بسته می‌شوند." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
 
@@ -147,7 +147,7 @@
                                     <Grid Width="66" Height="66">
                                         <ProgressRing x:Name="HeroRamRing" Width="66" Height="66" Minimum="0" Maximum="100" Value="60" IsIndeterminate="False" />
                                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                                            <TextBlock x:Name="HeroRamPercentText" Text="60%" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                                            <TextBlock x:Name="HeroRamPercentText" Text="60%" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                             <TextBlock Text="رم" FontSize="9.5" Foreground="{ThemeResource TextFillColorSecondaryBrush}" HorizontalAlignment="Center" />
                                         </StackPanel>
                                     </Grid>

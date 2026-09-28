@@ -47,20 +47,32 @@ namespace CleanC.UI
             }
             catch { }
 
-            // Sync titlebar theme and adaptive contrast on window activation and actual theme change
+            // Determine initial theme & adapt contrast to wallpaper
+            var initialTheme = (Application.Current.RequestedTheme == ApplicationTheme.Dark) ? ElementTheme.Dark : ElementTheme.Light;
+            _isWallpaperDark = WallpaperService.IsWallpaperDark();
+            UpdateAdaptiveThemeBrushes(initialTheme, _isWallpaperDark);
+
             this.Activated += (s, e) =>
             {
                 if (Content is FrameworkElement root)
                 {
-                    _ = RefreshAdaptiveThemeAsync(root.ActualTheme);
+                    _isWallpaperDark = WallpaperService.IsWallpaperDark();
+                    UpdateAdaptiveThemeBrushes(root.ActualTheme, _isWallpaperDark);
+                    UpdateTitleBarTheme(root.ActualTheme);
+                    SwitchToTab(DashboardView.Visibility == Visibility.Visible, root.ActualTheme);
                 }
             };
 
             if (Content is FrameworkElement rootElement)
             {
+                rootElement.RequestedTheme = initialTheme;
+
                 rootElement.ActualThemeChanged += (s, e) =>
                 {
-                    _ = RefreshAdaptiveThemeAsync(rootElement.ActualTheme);
+                    _isWallpaperDark = WallpaperService.IsWallpaperDark();
+                    UpdateAdaptiveThemeBrushes(rootElement.ActualTheme, _isWallpaperDark);
+                    UpdateTitleBarTheme(rootElement.ActualTheme);
+                    SwitchToTab(DashboardView.Visibility == Visibility.Visible, rootElement.ActualTheme);
                 };
 
                 rootElement.SizeChanged += (s, e) =>
@@ -122,7 +134,6 @@ namespace CleanC.UI
 
             // Initial load
             RefreshSystemStats();
-            _ = RefreshAdaptiveThemeAsync();
         }
 
         private AppWindow GetAppWindowForCurrentWindow()
@@ -923,38 +934,42 @@ namespace CleanC.UI
             ShowInfoBar("بروزرسانی شد", "اطلاعات مصرف رم، پردازنده و دیسک بروزرسانی شدند.", InfoBarSeverity.Informational);
         }
 
-        private async void ThemeToggleBtn_Click(object sender, RoutedEventArgs e)
+        private void ThemeToggleBtn_Click(object sender, RoutedEventArgs e)
         {
             if (Content is FrameworkElement root)
             {
                 ElementTheme newTheme = root.ActualTheme == ElementTheme.Dark ? ElementTheme.Light : ElementTheme.Dark;
+                
+                // 1. Force refresh wallpaper luminance
+                _isWallpaperDark = WallpaperService.IsWallpaperDark(forceRefresh: true);
+
+                // 2. Update brushes in Light theme dictionary BEFORE changing theme
+                UpdateAdaptiveThemeBrushes(newTheme, _isWallpaperDark);
+
+                // 3. Update Title Bar
+                UpdateTitleBarTheme(newTheme);
+
+                // 4. Change RequestedTheme - triggers WinUI 3 to re-evaluate all ThemeResources across the entire visual tree
                 root.RequestedTheme = newTheme;
                 ThemeIcon.Glyph = newTheme == ElementTheme.Dark ? "\uE708" : "\uE706";
-
-                await RefreshAdaptiveThemeAsync(newTheme);
 
                 if (_cachedScanResult != null)
                 {
                     RenderAdvancedGroups(_cachedScanResult);
                 }
+
+                SwitchToTab(DashboardView.Visibility == Visibility.Visible, newTheme);
             }
         }
 
         private bool _isWallpaperDark = false;
 
-        private async Task RefreshAdaptiveThemeAsync(ElementTheme? theme = null)
+        private void UpdateAdaptiveThemeBrushes(ElementTheme currentTheme, bool isWallpaperDark)
         {
             try
             {
-                ElementTheme currentTheme = theme ?? 
-                    (Content is FrameworkElement root && root.ActualTheme != ElementTheme.Default 
-                        ? root.ActualTheme 
-                        : (Application.Current.RequestedTheme == ApplicationTheme.Dark ? ElementTheme.Dark : ElementTheme.Light));
-
-                _isWallpaperDark = await WallpaperService.IsWallpaperDarkAsync();
-                
                 bool isDark = currentTheme == ElementTheme.Dark;
-                bool useLightText = isDark || _isWallpaperDark;
+                bool useLightText = isDark || isWallpaperDark;
 
                 var primaryColor = useLightText ? Colors.White : ColorHelper.FromArgb(255, 15, 23, 42);
                 var secondaryColor = useLightText ? ColorHelper.FromArgb(220, 241, 245, 249) : ColorHelper.FromArgb(255, 30, 41, 59);
@@ -994,9 +1009,6 @@ namespace CleanC.UI
                     rootElem.Resources["TextFillColorSecondaryBrush"] = new SolidColorBrush(secondaryColor);
                     rootElem.Resources["TextFillColorTertiaryBrush"] = new SolidColorBrush(tertiaryColor);
                 }
-
-                UpdateTitleBarTheme(currentTheme);
-                SwitchToTab(DashboardView.Visibility == Visibility.Visible, currentTheme);
             }
             catch { }
         }
