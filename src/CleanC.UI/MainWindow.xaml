@@ -7,7 +7,7 @@
     mc:Ignorable="d"
     Title="CleanC">
 
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,*" Background="{ThemeResource WindowCanvasBrush}">
         <Grid.Resources>
             <ThemeShadow x:Key="SharedCardShadow" />
         </Grid.Resources>
@@ -62,10 +62,10 @@
                 <!-- Quick Action Tools on Titlebar (Right, before caption buttons) - Pill shaped -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8" Margin="0,0,12,0">
                     <Button x:Name="RefreshStatsBtn" Click="RefreshStatsBtn_Click" ToolTipService.ToolTip="بروزرسانی وضعیت سیستم" Background="{ThemeResource AppHeaderPillBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" Width="32" Height="32" Padding="0" CornerRadius="16">
-                        <FontIcon Glyph="&#xE72C;" FontSize="12.5" />
+                        <FontIcon Glyph="&#xE72C;" FontSize="12.5" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                     </Button>
                     <Button x:Name="ThemeToggleBtn" Click="ThemeToggleBtn_Click" ToolTipService.ToolTip="تغییر تم (تاریک / روشن)" Background="{ThemeResource AppHeaderPillBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" Width="32" Height="32" Padding="0" CornerRadius="16">
-                        <FontIcon x:Name="ThemeIcon" Glyph="&#xE708;" FontSize="12.5" />
+                        <FontIcon x:Name="ThemeIcon" Glyph="&#xE708;" FontSize="12.5" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                     </Button>
                 </StackPanel>
 
@@ -126,22 +126,23 @@
                 <!-- ======================================================= -->
                 <!-- View 1: Unified 1-Click Dashboard                       -->
                 <!-- ======================================================= -->
-                <ScrollViewer x:Name="DashboardView" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch">
-                    <StackPanel Spacing="16" MaxWidth="960" HorizontalAlignment="Stretch">
+                <ScrollViewer x:Name="DashboardView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid HorizontalAlignment="Stretch">
+                        <StackPanel x:Name="DashboardContentPanel" Spacing="16" HorizontalAlignment="Center">
                         
                         <!-- Hero 1-Click Smart Boost Card -->
                         <Border x:Name="HeroCard" CornerRadius="14" Padding="26,20" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" HorizontalAlignment="Stretch" Translation="0,0,32" Shadow="{StaticResource SharedCardShadow}">
-                            <Grid ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
-                                <StackPanel Grid.Column="0" VerticalAlignment="Center" Spacing="6" MinWidth="260">
+                            <Grid x:Name="HeroContentGrid" ColumnDefinitions="*,Auto" HorizontalAlignment="Stretch">
+                                <StackPanel x:Name="HeroTextStack" Grid.Column="0" VerticalAlignment="Center" Spacing="6" MinWidth="220">
                                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                         <Ellipse Width="6" Height="6" Fill="{ThemeResource AccentFillColorDefaultBrush}" VerticalAlignment="Center" />
                                         <TextBlock Text="وضعیت سلامت و کارایی سیستم" FontSize="11.5" FontWeight="Medium" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                     <TextBlock x:Name="HeroHealthTitle" Text="سیستم آماده بهینه‌سازی است" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                    <TextBlock x:Name="HeroHealthSubtitle" Text="تنها با ۱ کلیک فایل‌های موقت پاک، حافظه رم آزاد و پردازه‌های اضافی بسته می‌شوند." FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="HeroHealthSubtitle" Text="تنها با ۱ کلیک فایل‌های موقت پاک، حافظه رم آزاد و پردازه‌های اضافی بسته می‌شوند." FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap" />
                                 </StackPanel>
 
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16" Margin="16,0,0,0">
+                                <StackPanel x:Name="HeroActionStack" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="16" Margin="16,0,0,0">
                                     <!-- Visual RAM Ring -->
                                     <Grid Width="66" Height="66">
                                         <ProgressRing x:Name="HeroRamRing" Width="66" Height="66" Minimum="0" Maximum="100" Value="60" IsIndeterminate="False" />
@@ -280,9 +281,9 @@
                         </Border>
 
                         <!-- Bento Status Grid (Full Stretch) -->
-                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12" HorizontalAlignment="Stretch">
+                        <Grid x:Name="BentoGrid" ColumnDefinitions="*,*,*" ColumnSpacing="12" RowSpacing="12" HorizontalAlignment="Stretch">
                             <!-- RAM Card -->
-                            <Border Grid.Column="0" CornerRadius="10" Padding="16,14" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" HorizontalAlignment="Stretch" Translation="0,0,16" Shadow="{StaticResource SharedCardShadow}">
+                            <Border x:Name="BentoRamCard" Grid.Column="0" CornerRadius="10" Padding="16,14" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" HorizontalAlignment="Stretch" Translation="0,0,16" Shadow="{StaticResource SharedCardShadow}">
                                 <StackPanel Spacing="9" HorizontalAlignment="Stretch">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xE9D2;" FontSize="15" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
@@ -290,12 +291,12 @@
                                     </StackPanel>
                                     <TextBlock x:Name="CardRamText" Text="-- / --" FontSize="17" FontWeight="SemiBold" />
                                     <ProgressBar x:Name="CardRamProgress" Minimum="0" Maximum="100" Value="0" Height="4" CornerRadius="2" HorizontalAlignment="Stretch" />
-                                    <Button x:Name="CardBoostRamBtn" Click="QuickBoostBtn_Click" Content="آزادسازی فوری رم" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" Style="{ThemeResource DefaultButtonStyle}" />
+                                    <Button x:Name="CardBoostRamBtn" Click="QuickBoostBtn_Click" Content="آزادسازی فوری رم" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
                                 </StackPanel>
                             </Border>
 
                             <!-- Drive C: Card -->
-                            <Border Grid.Column="1" CornerRadius="10" Padding="16,14" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" HorizontalAlignment="Stretch" Translation="0,0,16" Shadow="{StaticResource SharedCardShadow}">
+                            <Border x:Name="BentoDiskCard" Grid.Column="1" CornerRadius="10" Padding="16,14" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" HorizontalAlignment="Stretch" Translation="0,0,16" Shadow="{StaticResource SharedCardShadow}">
                                 <StackPanel Spacing="9" HorizontalAlignment="Stretch">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xEDA2;" FontSize="15" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
@@ -303,12 +304,12 @@
                                     </StackPanel>
                                     <TextBlock x:Name="CardDiskText" Text="-- آزاد از --" FontSize="17" FontWeight="SemiBold" />
                                     <ProgressBar x:Name="CardDiskProgress" Minimum="0" Maximum="100" Value="0" Height="4" CornerRadius="2" HorizontalAlignment="Stretch" />
-                                    <Button x:Name="CardToggleCustomCleanBtn" Click="CardToggleCustomCleanBtn_Click" Content="سفارشی‌سازی موارد پاکسازی" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" Style="{ThemeResource DefaultButtonStyle}" />
+                                    <Button x:Name="CardToggleCustomCleanBtn" Click="CardToggleCustomCleanBtn_Click" Content="سفارشی‌سازی موارد پاکسازی" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
                                 </StackPanel>
                             </Border>
 
                             <!-- CPU & Network Card -->
-                            <Border Grid.Column="2" CornerRadius="10" Padding="16,14" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" HorizontalAlignment="Stretch" Translation="0,0,16" Shadow="{StaticResource SharedCardShadow}">
+                            <Border x:Name="BentoCpuCard" Grid.Column="2" CornerRadius="10" Padding="16,14" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" HorizontalAlignment="Stretch" Translation="0,0,16" Shadow="{StaticResource SharedCardShadow}">
                                 <StackPanel Spacing="9" HorizontalAlignment="Stretch">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xE774;" FontSize="15" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
@@ -316,13 +317,21 @@
                                     </StackPanel>
                                     <TextBlock x:Name="CardCpuText" Text="مصرف CPU: 0%" FontSize="17" FontWeight="SemiBold" />
                                     <ProgressBar x:Name="CardCpuProgress" Minimum="0" Maximum="100" Value="0" Height="4" CornerRadius="2" HorizontalAlignment="Stretch" />
-                                    <Button x:Name="CardFlushDnsBtn" Click="CardFlushDnsBtn_Click" Content="تخلیه کش DNS" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" Style="{ThemeResource DefaultButtonStyle}" />
+                                    <Button x:Name="CardFlushDnsBtn" Click="CardFlushDnsBtn_Click" Content="تخلیه کش DNS" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
                                 </StackPanel>
                             </Border>
                         </Grid>
 
                         <!-- Customization / Advanced Items Expander (For power users) -->
                         <Expander x:Name="AdvancedCleanExpander" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" CornerRadius="10" Margin="0,4,0,0">
+                            <Expander.Resources>
+                                <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent" />
+                                <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#10808080" />
+                                <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#20808080" />
+                                <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="Transparent" />
+                                <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="Transparent" />
+                                <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="Transparent" />
+                            </Expander.Resources>
                             <Expander.Header>
                                 <Grid ColumnDefinitions="Auto,*,Auto" HorizontalAlignment="Stretch">
                                     <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -341,13 +350,15 @@
                         <!-- Toast / Status InfoBar -->
                         <InfoBar x:Name="StatusInfoBar" IsOpen="False" Severity="Success" IsClosable="True" Margin="0,8,0,0" />
                     </StackPanel>
+                    </Grid>
                 </ScrollViewer>
 
                 <!-- ======================================================= -->
                 <!-- View 2: System Tools & Diagnostics                      -->
                 <!-- ======================================================= -->
-                <ScrollViewer x:Name="ToolsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalContentAlignment="Stretch">
-                    <StackPanel Spacing="12" MaxWidth="960" HorizontalAlignment="Stretch">
+                <ScrollViewer x:Name="ToolsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <Grid HorizontalAlignment="Stretch">
+                        <StackPanel x:Name="ToolsContentPanel" Spacing="12" HorizontalAlignment="Center">
                         <TextBlock Text="ابزارهای رسمی و عیب‌یابی سیستم‌عامل ویندوز" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
                         
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12" RowSpacing="12" HorizontalAlignment="Stretch">
@@ -414,6 +425,7 @@
                             </Button>
                         </Grid>
                     </StackPanel>
+                    </Grid>
                 </ScrollViewer>
             </Grid>
         </Grid>

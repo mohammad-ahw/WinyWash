@@ -10,34 +10,34 @@
 
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
-                    <!-- Transparent canvas allowing native Desktop Acrylic frosted glass -->
+                    <!-- Transparent canvas allowing native Desktop Acrylic frosted glass to shine through directly -->
                     <SolidColorBrush x:Key="WindowCanvasBrush" Color="#00000000" />
                     
-                    <!-- Highly Translucent Frosted Glass Card: 20% white allows strong acrylic blur to shine through while keeping a Glassmorphism tint -->
-                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#33FFFFFF" />
-                    <!-- Subtle inner highlight via gradient border -->
+                    <!-- Luminous Frosted Glass Card: 82% white creates a bright milky frosted glass that guarantees high contrast for dark text over any wallpaper -->
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#D2FFFFFF" />
+                    <!-- Specular glass rim border with crisp visible definition in Light mode -->
                     <LinearGradientBrush x:Key="AppCardBorderBrush" StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#C0FFFFFF" Offset="0.0" />
-                        <GradientStop Color="#20FFFFFF" Offset="1.0" />
+                        <GradientStop Color="#FFFFFFFF" Offset="0.0" />
+                        <GradientStop Color="#25000000" Offset="1.0" />
                     </LinearGradientBrush>
                     
-                    <!-- Secondary surface inside cards (chips, sub-cards) -->
-                    <SolidColorBrush x:Key="AppCardSecondaryBrush" Color="#40F0F4F8" />
+                    <!-- Secondary surface inside cards (chips, sub-cards, list items) -->
+                    <SolidColorBrush x:Key="AppCardSecondaryBrush" Color="#40F1F5F9" />
                     
                     <!-- Translucent Glass Header -->
-                    <SolidColorBrush x:Key="AppHeaderBackgroundBrush" Color="#2AFFFFFF" />
+                    <SolidColorBrush x:Key="AppHeaderBackgroundBrush" Color="#B8FFFFFF" />
                     <LinearGradientBrush x:Key="AppHeaderBorderBrush" StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#40FFFFFF" Offset="0.0" />
-                        <GradientStop Color="#10000000" Offset="1.0" />
+                        <GradientStop Color="#FFFFFFFF" Offset="0.0" />
+                        <GradientStop Color="#18000000" Offset="1.0" />
                     </LinearGradientBrush>
                     
                     <!-- Quick action button pill background -->
                     <SolidColorBrush x:Key="AppHeaderPillBrush" Color="#12000000" />
-                    <SolidColorBrush x:Key="AppHeaderPillHoverBrush" Color="#1E000000" />
+                    <SolidColorBrush x:Key="AppHeaderPillHoverBrush" Color="#22000000" />
                     
                     <!-- Running as Admin Pill Badge -->
                     <SolidColorBrush x:Key="AdminBadgeBackgroundBrush" Color="#180078D4" />
-                    <SolidColorBrush x:Key="AdminBadgeBorderBrush" Color="#350078D4" />
+                    <SolidColorBrush x:Key="AdminBadgeBorderBrush" Color="#380078D4" />
                     <SolidColorBrush x:Key="AdminBadgeForegroundBrush" Color="#0067C0" />
                 </ResourceDictionary>
 
@@ -45,19 +45,19 @@
                     <!-- Transparent canvas allowing native Desktop Acrylic frosted glass -->
                     <SolidColorBrush x:Key="WindowCanvasBrush" Color="#00000000" />
                     
-                    <!-- Highly Translucent Frosted Dark Card: 20% dark slate allows strong acrylic blur to shine through -->
-                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#331A1A1A" />
+                    <!-- Frosted Dark Card: sleek dark slate allowing acrylic blur to shine through -->
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#4D1E1E1E" />
                     <!-- Subtle inner highlight via gradient border -->
                     <LinearGradientBrush x:Key="AppCardBorderBrush" StartPoint="0,0" EndPoint="0,1">
                         <GradientStop Color="#45FFFFFF" Offset="0.0" />
-                        <GradientStop Color="#05FFFFFF" Offset="1.0" />
+                        <GradientStop Color="#0AFFFFFF" Offset="1.0" />
                     </LinearGradientBrush>
                     
                     <!-- Secondary surface inside cards -->
-                    <SolidColorBrush x:Key="AppCardSecondaryBrush" Color="#33303030" />
+                    <SolidColorBrush x:Key="AppCardSecondaryBrush" Color="#45303030" />
                     
                     <!-- Translucent Glass Header -->
-                    <SolidColorBrush x:Key="AppHeaderBackgroundBrush" Color="#2A141414" />
+                    <SolidColorBrush x:Key="AppHeaderBackgroundBrush" Color="#40141414" />
                     <LinearGradientBrush x:Key="AppHeaderBorderBrush" StartPoint="0,0" EndPoint="0,1">
                         <GradientStop Color="#25FFFFFF" Offset="0.0" />
                         <GradientStop Color="#05FFFFFF" Offset="1.0" />

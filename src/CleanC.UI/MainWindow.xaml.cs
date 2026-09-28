@@ -4,11 +4,13 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.UI;
+using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Windows.Graphics;
+using WinRT;
 using CleanC.Core.Models;
 using CleanC.Core.Services;
 using CleanC.UI.ViewModels;
@@ -23,6 +25,8 @@ namespace CleanC.UI
         private ScanResult? _cachedScanResult;
         private bool _isBusy = false;
         private long _displayedFreedBytes = 0;
+        private DesktopAcrylicController? _acrylicController;
+        private SystemBackdropConfiguration? _configurationSource;
 
         public MainWindow()
         {
@@ -64,13 +68,18 @@ namespace CleanC.UI
             // Set Initial Window Size
             _appWindow.Resize(new SizeInt32(1060, 750));
 
+            this.SizeChanged += (s, e) =>
+            {
+                UpdateResponsiveLayout(e.Size.Width);
+            };
+
             _appWindow.Changed += (s, e) =>
             {
                 if (e.DidSizeChange)
                 {
                     var currentSize = _appWindow.Size;
-                    int minWidth = 880;
-                    int minHeight = 640;
+                    int minWidth = 660;
+                    int minHeight = 550;
                     if (currentSize.Width < minWidth || currentSize.Height < minHeight)
                     {
                         _appWindow.Resize(new SizeInt32(
@@ -83,6 +92,9 @@ namespace CleanC.UI
                     UpdateCaptionInsets();
                 }
             };
+
+            // Initial responsive layout
+            UpdateResponsiveLayout(1060);
 
             // Set default selected navigation item
             SwitchToTab(true);
@@ -145,16 +157,21 @@ namespace CleanC.UI
         {
             bool isDark = theme == ElementTheme.Dark;
 
-            // Sync Win32 DWM Immersive Dark Mode and System Backdrop with HWND
+            // Sync Win32 DWM Immersive Dark Mode with HWND
             try
             {
                 IntPtr hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
                 int isDarkVal = isDark ? 1 : 0;
                 CleanC.Core.Native.Win32.DwmSetWindowAttribute(hWnd, CleanC.Core.Native.Win32.DWMWA_USE_IMMERSIVE_DARK_MODE, ref isDarkVal, sizeof(int));
-                int backdropType = 3; // Acrylic
-                CleanC.Core.Native.Win32.DwmSetWindowAttribute(hWnd, CleanC.Core.Native.Win32.DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
+                
+                // Clear any DWM backdrop override (1 = DWMSBT_NONE) so DWM does NOT draw an opaque light fallback sheet!
+                int backdropNone = 1;
+                CleanC.Core.Native.Win32.DwmSetWindowAttribute(hWnd, CleanC.Core.Native.Win32.DWMWA_SYSTEMBACKDROP_TYPE, ref backdropNone, sizeof(int));
             }
             catch { }
+
+            // Apply fine-tuned acrylic composition backdrop for active theme
+            ConfigureSystemBackdrop(theme);
 
             if (!AppWindowTitleBar.IsCustomizationSupported()) return;
             var titleBar = _appWindow.TitleBar;
@@ -182,21 +199,74 @@ namespace CleanC.UI
             }
         }
 
-        private void ConfigureSystemBackdrop()
+        private void ConfigureSystemBackdrop(ElementTheme? theme = null)
         {
             try
             {
-                this.SystemBackdrop = null;
-                this.SystemBackdrop = new DesktopAcrylicBackdrop();
+                ElementTheme currentTheme = theme ?? 
+                    (Content is FrameworkElement root && root.ActualTheme != ElementTheme.Default 
+                        ? root.ActualTheme 
+                        : (Application.Current.RequestedTheme == ApplicationTheme.Dark ? ElementTheme.Dark : ElementTheme.Light));
+
+                bool isDark = currentTheme == ElementTheme.Dark;
+
+                if (DesktopAcrylicController.IsSupported())
+                {
+                    if (_configurationSource == null)
+                    {
+                        _configurationSource = new SystemBackdropConfiguration();
+                        this.Activated += (s, e) =>
+                        {
+                            if (_configurationSource != null)
+                            {
+                                _configurationSource.IsInputActive = e.WindowActivationState != WindowActivationState.Deactivated;
+                            }
+                        };
+                        this.Closed += (s, e) =>
+                        {
+                            _acrylicController?.Dispose();
+                            _acrylicController = null;
+                            _configurationSource = null;
+                        };
+                    }
+
+                    _configurationSource.Theme = isDark ? SystemBackdropTheme.Dark : SystemBackdropTheme.Light;
+                    _configurationSource.IsInputActive = true;
+
+                    if (_acrylicController == null)
+                    {
+                        _acrylicController = new DesktopAcrylicController();
+                        _acrylicController.AddSystemBackdropTarget(this.As<Microsoft.UI.Composition.ICompositionSupportsSystemBackdrop>());
+                        _acrylicController.SetSystemBackdropConfiguration(_configurationSource);
+                    }
+
+                    if (isDark)
+                    {
+                        _acrylicController.TintColor = Windows.UI.Color.FromArgb(255, 20, 20, 20);
+                        _acrylicController.TintOpacity = 0.28f;
+                        _acrylicController.LuminosityOpacity = 0.65f;
+                    }
+                    else
+                    {
+                        // LUMINOUS FROSTED GLASS IN LIGHT MODE:
+                        // Balanced tint opacity (0.65f) and luminosity (0.50f) provides a bright, silky
+                        // frosted glass backdrop that ensures crystal-clear readability for dark text
+                        // over any desktop wallpaper, while maintaining vibrant acrylic blur!
+                        _acrylicController.TintColor = Windows.UI.Color.FromArgb(255, 246, 248, 252);
+                        _acrylicController.TintOpacity = 0.65f;
+                        _acrylicController.LuminosityOpacity = 0.50f;
+                    }
+                }
+                else
+                {
+                    this.SystemBackdrop = new DesktopAcrylicBackdrop();
+                }
             }
             catch
             {
                 try
                 {
-                    this.SystemBackdrop = new MicaBackdrop
-                    {
-                        Kind = Microsoft.UI.Composition.SystemBackdrops.MicaKind.BaseAlt
-                    };
+                    this.SystemBackdrop = new DesktopAcrylicBackdrop();
                 }
                 catch { }
             }
@@ -891,17 +961,17 @@ namespace CleanC.UI
             // Frosted glass active tab background matching theme
             var activeBg = isDark 
                 ? new SolidColorBrush(ColorHelper.FromArgb(200, 42, 42, 42)) 
-                : new SolidColorBrush(ColorHelper.FromArgb(135, 255, 255, 255));
+                : new SolidColorBrush(Colors.White);
             var activeBorder = isDark 
                 ? new SolidColorBrush(ColorHelper.FromArgb(60, 255, 255, 255)) 
-                : new SolidColorBrush(ColorHelper.FromArgb(120, 255, 255, 255));
+                : new SolidColorBrush(ColorHelper.FromArgb(40, 0, 0, 0));
             var activeText = isDark 
                 ? new SolidColorBrush(Colors.White) 
-                : new SolidColorBrush(ColorHelper.FromArgb(255, 24, 24, 24));
+                : new SolidColorBrush(ColorHelper.FromArgb(255, 15, 23, 42));
 
             var inactiveText = isDark 
                 ? new SolidColorBrush(ColorHelper.FromArgb(170, 255, 255, 255)) 
-                : new SolidColorBrush(ColorHelper.FromArgb(170, 0, 0, 0));
+                : new SolidColorBrush(ColorHelper.FromArgb(220, 71, 85, 105));
 
             var accentBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
 
@@ -984,6 +1054,110 @@ namespace CleanC.UI
             catch
             {
                 return false;
+            }
+        }
+
+        // ====================================================================
+        // Responsive & Centered Layout Controller
+        // ====================================================================
+
+        private bool _isCompactLayout = false;
+
+        private void UpdateResponsiveLayout(double windowWidth)
+        {
+            if (windowWidth <= 0) return;
+
+            // Margin is 24 on left, 24 on right => 48
+            double availableWidth = windowWidth - 48;
+            if (availableWidth < 300) availableWidth = 300;
+
+            // Max comfortable reading width for desktop dashboard
+            double targetWidth = Math.Min(availableWidth, 980);
+
+            if (DashboardContentPanel != null)
+            {
+                DashboardContentPanel.Width = targetWidth;
+            }
+            if (ToolsContentPanel != null)
+            {
+                ToolsContentPanel.Width = targetWidth;
+            }
+
+            // Adaptive layout when screen is narrow (e.g. snapped or small window)
+            bool shouldBeCompact = targetWidth < 740;
+            if (shouldBeCompact != _isCompactLayout)
+            {
+                _isCompactLayout = shouldBeCompact;
+                ApplyResponsiveMode(_isCompactLayout);
+            }
+        }
+
+        private void ApplyResponsiveMode(bool compact)
+        {
+            if (HeroContentGrid == null || BentoGrid == null) return;
+
+            if (compact)
+            {
+                // Stack Hero card vertically
+                HeroContentGrid.ColumnDefinitions.Clear();
+                HeroContentGrid.RowDefinitions.Clear();
+                HeroContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                HeroContentGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+                Grid.SetColumn(HeroTextStack, 0);
+                Grid.SetRow(HeroTextStack, 0);
+
+                Grid.SetColumn(HeroActionStack, 0);
+                Grid.SetRow(HeroActionStack, 1);
+                HeroActionStack.Margin = new Thickness(0, 14, 0, 0);
+
+                // Stack Bento grid vertically into 1 column
+                BentoGrid.ColumnDefinitions.Clear();
+                BentoGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                BentoGrid.RowDefinitions.Clear();
+                BentoGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                BentoGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                BentoGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+                Grid.SetColumn(BentoRamCard, 0);
+                Grid.SetRow(BentoRamCard, 0);
+
+                Grid.SetColumn(BentoDiskCard, 0);
+                Grid.SetRow(BentoDiskCard, 1);
+
+                Grid.SetColumn(BentoCpuCard, 0);
+                Grid.SetRow(BentoCpuCard, 2);
+            }
+            else
+            {
+                // Side-by-side Hero card
+                HeroContentGrid.RowDefinitions.Clear();
+                HeroContentGrid.ColumnDefinitions.Clear();
+                HeroContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                HeroContentGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                Grid.SetRow(HeroTextStack, 0);
+                Grid.SetColumn(HeroTextStack, 0);
+
+                Grid.SetRow(HeroActionStack, 0);
+                Grid.SetColumn(HeroActionStack, 1);
+                HeroActionStack.Margin = new Thickness(16, 0, 0, 0);
+
+                // Side-by-side 3 columns Bento grid
+                BentoGrid.RowDefinitions.Clear();
+                BentoGrid.ColumnDefinitions.Clear();
+                BentoGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                BentoGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                BentoGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+                Grid.SetRow(BentoRamCard, 0);
+                Grid.SetColumn(BentoRamCard, 0);
+
+                Grid.SetRow(BentoDiskCard, 0);
+                Grid.SetColumn(BentoDiskCard, 1);
+
+                Grid.SetRow(BentoCpuCard, 0);
+                Grid.SetColumn(BentoCpuCard, 2);
             }
         }
     }
