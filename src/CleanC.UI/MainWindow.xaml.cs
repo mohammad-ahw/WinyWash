@@ -63,15 +63,20 @@ namespace CleanC.UI
                     UpdateTitleBarTheme(rootElement.ActualTheme);
                     SwitchToTab(DashboardView.Visibility == Visibility.Visible, rootElement.ActualTheme);
                 };
+
+                rootElement.SizeChanged += (s, e) =>
+                {
+                    UpdateResponsiveLayout(e.NewSize.Width);
+                };
             }
 
-            // Set Initial Window Size
-            _appWindow.Resize(new SizeInt32(1060, 750));
-
-            this.SizeChanged += (s, e) =>
-            {
-                UpdateResponsiveLayout(e.Size.Width);
-            };
+            // Set Initial Window Size (DPI-aware and spacious)
+            IntPtr hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            uint dpi = CleanC.Core.Native.Win32.GetDpiForWindow(hWnd);
+            double dpiScale = (dpi > 0) ? (dpi / 96.0) : 1.0;
+            int initialW = (int)(1060 * dpiScale);
+            int initialH = (int)(760 * dpiScale);
+            _appWindow.Resize(new SizeInt32(Math.Max(initialW, 1060), Math.Max(initialH, 760)));
 
             _appWindow.Changed += (s, e) =>
             {
@@ -93,8 +98,9 @@ namespace CleanC.UI
                 }
             };
 
-            // Initial responsive layout
-            UpdateResponsiveLayout(1060);
+            // Initial DPI-aware responsive layout pass
+            double initialDipWidth = _appWindow.Size.Width / dpiScale;
+            UpdateResponsiveLayout(initialDipWidth);
 
             // Set default selected navigation item
             SwitchToTab(true);
@@ -248,13 +254,13 @@ namespace CleanC.UI
                     }
                     else
                     {
-                        // LUMINOUS FROSTED GLASS IN LIGHT MODE:
-                        // Balanced tint opacity (0.65f) and luminosity (0.50f) provides a bright, silky
-                        // frosted glass backdrop that ensures crystal-clear readability for dark text
-                        // over any desktop wallpaper, while maintaining vibrant acrylic blur!
-                        _acrylicController.TintColor = Windows.UI.Color.FromArgb(255, 246, 248, 252);
-                        _acrylicController.TintOpacity = 0.65f;
-                        _acrylicController.LuminosityOpacity = 0.50f;
+                        // TRUE FROSTED GLASS IN LIGHT MODE:
+                        // High-transparency acrylic (TintOpacity = 0.22f) allows desktop wallpaper
+                        // to show through with sleek frosted diffusion (LuminosityOpacity = 0.70f),
+                        // exactly matching the sleek glass aesthetic of Dark Mode.
+                        _acrylicController.TintColor = Windows.UI.Color.FromArgb(255, 255, 255, 255);
+                        _acrylicController.TintOpacity = 0.22f;
+                        _acrylicController.LuminosityOpacity = 0.70f;
                     }
                 }
                 else
@@ -971,7 +977,7 @@ namespace CleanC.UI
 
             var inactiveText = isDark 
                 ? new SolidColorBrush(ColorHelper.FromArgb(170, 255, 255, 255)) 
-                : new SolidColorBrush(ColorHelper.FromArgb(220, 71, 85, 105));
+                : new SolidColorBrush(ColorHelper.FromArgb(255, 51, 65, 85));
 
             var accentBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
 
@@ -1069,22 +1075,11 @@ namespace CleanC.UI
 
             // Margin is 24 on left, 24 on right => 48
             double availableWidth = windowWidth - 48;
-            if (availableWidth < 300) availableWidth = 300;
+            if (availableWidth <= 0) return;
 
-            // Max comfortable reading width for desktop dashboard
-            double targetWidth = Math.Min(availableWidth, 980);
-
-            if (DashboardContentPanel != null)
-            {
-                DashboardContentPanel.Width = targetWidth;
-            }
-            if (ToolsContentPanel != null)
-            {
-                ToolsContentPanel.Width = targetWidth;
-            }
-
-            // Adaptive layout when screen is narrow (e.g. snapped or small window)
-            bool shouldBeCompact = targetWidth < 740;
+            // Adaptive layout when screen is narrow (e.g. snapped, scaled, or small window)
+            // When available dashboard width is < 820 DIPs, Hero and Bento cards stack cleanly
+            bool shouldBeCompact = availableWidth < 820;
             if (shouldBeCompact != _isCompactLayout)
             {
                 _isCompactLayout = shouldBeCompact;

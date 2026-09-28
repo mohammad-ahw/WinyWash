@@ -128,7 +128,7 @@
                 <!-- ======================================================= -->
                 <ScrollViewer x:Name="DashboardView" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <Grid HorizontalAlignment="Stretch">
-                        <StackPanel x:Name="DashboardContentPanel" Spacing="16" HorizontalAlignment="Center">
+                        <StackPanel x:Name="DashboardContentPanel" Spacing="16" HorizontalAlignment="Stretch" MaxWidth="960">
                         
                         <!-- Hero 1-Click Smart Boost Card -->
                         <Border x:Name="HeroCard" CornerRadius="14" Padding="26,20" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" HorizontalAlignment="Stretch" Translation="0,0,32" Shadow="{StaticResource SharedCardShadow}">
@@ -358,7 +358,7 @@
                 <!-- ======================================================= -->
                 <ScrollViewer x:Name="ToolsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <Grid HorizontalAlignment="Stretch">
-                        <StackPanel x:Name="ToolsContentPanel" Spacing="12" HorizontalAlignment="Center">
+                        <StackPanel x:Name="ToolsContentPanel" Spacing="12" HorizontalAlignment="Stretch" MaxWidth="960">
                         <TextBlock Text="ابزارهای رسمی و عیب‌یابی سیستم‌عامل ویندوز" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
                         
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12" RowSpacing="12" HorizontalAlignment="Stretch">

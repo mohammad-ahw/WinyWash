@@ -61,5 +61,8 @@ namespace CleanC.Core.Native
 
         public const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
         public const int DWMWA_SYSTEMBACKDROP_TYPE = 38;
+
+        [DllImport("user32.dll")]
+        public static extern uint GetDpiForWindow(IntPtr hwnd);
     }
 }
