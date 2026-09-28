@@ -254,13 +254,12 @@ namespace CleanC.UI
                     }
                     else
                     {
-                        // TRUE FROSTED GLASS IN LIGHT MODE:
-                        // High-transparency acrylic (TintOpacity = 0.22f) allows desktop wallpaper
-                        // to show through with sleek frosted diffusion (LuminosityOpacity = 0.70f),
-                        // exactly matching the sleek glass aesthetic of Dark Mode.
+                        // TRUE SEE-THROUGH GLASS IN LIGHT MODE:
+                        // Low tint opacity (0.06f) and zero luminosity wash ensures the desktop
+                        // wallpaper directly and visibly shines through with native silky acrylic blur!
                         _acrylicController.TintColor = Windows.UI.Color.FromArgb(255, 255, 255, 255);
-                        _acrylicController.TintOpacity = 0.22f;
-                        _acrylicController.LuminosityOpacity = 0.70f;
+                        _acrylicController.TintOpacity = 0.06f;
+                        _acrylicController.LuminosityOpacity = 0.0f;
                     }
                 }
                 else
