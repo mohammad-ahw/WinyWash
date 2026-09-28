@@ -47,32 +47,23 @@ namespace CleanC.UI
             }
             catch { }
 
-            // Determine initial theme & adapt contrast to wallpaper
+            // Determine initial theme & apply cleanly
             var initialTheme = (Application.Current.RequestedTheme == ApplicationTheme.Dark) ? ElementTheme.Dark : ElementTheme.Light;
-            _isWallpaperDark = WallpaperService.IsWallpaperDark();
-            UpdateAdaptiveThemeBrushes(initialTheme, _isWallpaperDark);
+            ApplyTheme(initialTheme);
 
             this.Activated += (s, e) =>
             {
                 if (Content is FrameworkElement root)
                 {
-                    _isWallpaperDark = WallpaperService.IsWallpaperDark();
-                    UpdateAdaptiveThemeBrushes(root.ActualTheme, _isWallpaperDark);
-                    UpdateTitleBarTheme(root.ActualTheme);
-                    SwitchToTab(DashboardView.Visibility == Visibility.Visible, root.ActualTheme);
+                    ApplyTheme(root.ActualTheme);
                 }
             };
 
             if (Content is FrameworkElement rootElement)
             {
-                rootElement.RequestedTheme = initialTheme;
-
                 rootElement.ActualThemeChanged += (s, e) =>
                 {
-                    _isWallpaperDark = WallpaperService.IsWallpaperDark();
-                    UpdateAdaptiveThemeBrushes(rootElement.ActualTheme, _isWallpaperDark);
-                    UpdateTitleBarTheme(rootElement.ActualTheme);
-                    SwitchToTab(DashboardView.Visibility == Visibility.Visible, rootElement.ActualTheme);
+                    ApplyTheme(rootElement.ActualTheme);
                 };
 
                 rootElement.SizeChanged += (s, e) =>
@@ -779,6 +770,11 @@ namespace CleanC.UI
         {
             AdvancedGroupsContainer.Children.Clear();
 
+            bool isDarkTheme = (Content is FrameworkElement root && root.ActualTheme == ElementTheme.Dark);
+            bool useWhiteText = isDarkTheme ? true : _isWallpaperDark;
+            var itemPrimary = useWhiteText ? new SolidColorBrush(Colors.White) : new SolidColorBrush(ColorHelper.FromArgb(255, 15, 23, 42));
+            var itemSecondary = useWhiteText ? new SolidColorBrush(ColorHelper.FromArgb(220, 241, 245, 249)) : new SolidColorBrush(ColorHelper.FromArgb(255, 30, 41, 59));
+
             foreach (var grp in scan.Groups)
             {
                 var groupExpander = new Expander
@@ -811,8 +807,8 @@ namespace CleanC.UI
                 headerGrid.Children.Add(icon);
 
                 var titleStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-                titleStack.Children.Add(new TextBlock { Text = grp.Title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 13 });
-                titleStack.Children.Add(new TextBlock { Text = grp.Description, FontSize = 11, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
+                titleStack.Children.Add(new TextBlock { Text = grp.Title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 13, Foreground = itemPrimary });
+                titleStack.Children.Add(new TextBlock { Text = grp.Description, FontSize = 11, Foreground = itemSecondary });
                 Grid.SetColumn(titleStack, 1);
                 headerGrid.Children.Add(titleStack);
 
@@ -822,6 +818,7 @@ namespace CleanC.UI
                     FontWeight = Microsoft.UI.Text.FontWeights.Bold,
                     FontSize = 13,
                     VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = itemPrimary,
                     Margin = new Thickness(16, 0, 0, 0)
                 };
                 Grid.SetColumn(badge, 2);
@@ -843,7 +840,7 @@ namespace CleanC.UI
                     {
                         Text = "هیچ موردی در این بخش شناسایی نشد (کاملاً تمیز است).",
                         FontSize = 12,
-                        Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                        Foreground = itemSecondary,
                         Margin = new Thickness(4)
                     });
                 }
@@ -881,7 +878,7 @@ namespace CleanC.UI
 
                         var textStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
                         var titleRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-                        titleRow.Children.Add(new TextBlock { Text = item.Title, FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.Medium });
+                        titleRow.Children.Add(new TextBlock { Text = item.Title, FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.Medium, Foreground = itemPrimary });
 
                         if (item.RequiresElevation)
                         {
@@ -891,7 +888,7 @@ namespace CleanC.UI
                         }
 
                         textStack.Children.Add(titleRow);
-                        textStack.Children.Add(new TextBlock { Text = item.Description, FontSize = 11, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
+                        textStack.Children.Add(new TextBlock { Text = item.Description, FontSize = 11, Foreground = itemSecondary });
                         Grid.SetColumn(textStack, 1);
                         itemGrid.Children.Add(textStack);
 
@@ -900,7 +897,8 @@ namespace CleanC.UI
                             Text = item.FormattedBytes,
                             FontSize = 12,
                             FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
-                            VerticalAlignment = VerticalAlignment.Center
+                            VerticalAlignment = VerticalAlignment.Center,
+                            Foreground = itemPrimary
                         };
                         Grid.SetColumn(sizeText, 2);
                         itemGrid.Children.Add(sizeText);
@@ -939,76 +937,133 @@ namespace CleanC.UI
             if (Content is FrameworkElement root)
             {
                 ElementTheme newTheme = root.ActualTheme == ElementTheme.Dark ? ElementTheme.Light : ElementTheme.Dark;
-                
-                // 1. Force refresh wallpaper luminance
-                _isWallpaperDark = WallpaperService.IsWallpaperDark(forceRefresh: true);
-
-                // 2. Update brushes in Light theme dictionary BEFORE changing theme
-                UpdateAdaptiveThemeBrushes(newTheme, _isWallpaperDark);
-
-                // 3. Update Title Bar
-                UpdateTitleBarTheme(newTheme);
-
-                // 4. Change RequestedTheme - triggers WinUI 3 to re-evaluate all ThemeResources across the entire visual tree
-                root.RequestedTheme = newTheme;
-                ThemeIcon.Glyph = newTheme == ElementTheme.Dark ? "\uE708" : "\uE706";
-
-                if (_cachedScanResult != null)
-                {
-                    RenderAdvancedGroups(_cachedScanResult);
-                }
-
-                SwitchToTab(DashboardView.Visibility == Visibility.Visible, newTheme);
+                ApplyTheme(newTheme);
             }
         }
 
         private bool _isWallpaperDark = false;
+        private bool _isApplyingTheme = false;
 
-        private void UpdateAdaptiveThemeBrushes(ElementTheme currentTheme, bool isWallpaperDark)
+        private void ApplyTheme(ElementTheme targetTheme)
         {
+            if (_isApplyingTheme) return;
+            _isApplyingTheme = true;
+
             try
             {
-                bool isDark = currentTheme == ElementTheme.Dark;
-                bool useLightText = isDark || isWallpaperDark;
+                _isWallpaperDark = WallpaperService.IsWallpaperDark(forceRefresh: true);
+                bool isDarkTheme = targetTheme == ElementTheme.Dark;
+                bool useWhiteText = isDarkTheme ? true : _isWallpaperDark;
 
-                var primaryColor = useLightText ? Colors.White : ColorHelper.FromArgb(255, 15, 23, 42);
-                var secondaryColor = useLightText ? ColorHelper.FromArgb(220, 241, 245, 249) : ColorHelper.FromArgb(255, 30, 41, 59);
-                var tertiaryColor = useLightText ? ColorHelper.FromArgb(170, 203, 213, 225) : ColorHelper.FromArgb(255, 51, 65, 85);
+                var primaryColor = useWhiteText ? Colors.White : ColorHelper.FromArgb(255, 15, 23, 42);
+                var secondaryColor = useWhiteText ? ColorHelper.FromArgb(220, 241, 245, 249) : ColorHelper.FromArgb(255, 30, 41, 59);
+                var tertiaryColor = useWhiteText ? ColorHelper.FromArgb(170, 203, 213, 225) : ColorHelper.FromArgb(255, 51, 65, 85);
 
-                // 1. Mutate App.xaml Light Theme Dictionary brushes in-place
+                var primaryBrush = new SolidColorBrush(primaryColor);
+                var secondaryBrush = new SolidColorBrush(secondaryColor);
+                var tertiaryBrush = new SolidColorBrush(tertiaryColor);
+
+                // 1. Mutate App.xaml Light Theme Dictionary brushes in-place if in Light mode
                 if (Application.Current.Resources.ThemeDictionaries.TryGetValue("Light", out var lightDictObj) &&
                     lightDictObj is ResourceDictionary lightDict)
                 {
+                    var targetLightPrimary = _isWallpaperDark ? Colors.White : ColorHelper.FromArgb(255, 15, 23, 42);
+                    var targetLightSec = _isWallpaperDark ? ColorHelper.FromArgb(220, 241, 245, 249) : ColorHelper.FromArgb(255, 30, 41, 59);
+                    var targetLightTert = _isWallpaperDark ? ColorHelper.FromArgb(170, 203, 213, 225) : ColorHelper.FromArgb(255, 51, 65, 85);
+
                     string[] primaryBrushes = { "TextFillColorPrimaryBrush", "DefaultTextForegroundThemeBrush", "ButtonForeground", "ButtonForegroundPointerOver", "ButtonForegroundPressed" };
                     foreach (var key in primaryBrushes)
                     {
                         if (lightDict.TryGetValue(key, out var bObj) && bObj is SolidColorBrush scb)
                         {
-                            scb.Color = primaryColor;
+                            scb.Color = targetLightPrimary;
                         }
                     }
 
                     if (lightDict.TryGetValue("TextFillColorSecondaryBrush", out var secObj) && secObj is SolidColorBrush secBrush)
-                    {
-                        secBrush.Color = secondaryColor;
-                    }
+                        secBrush.Color = targetLightSec;
                     if (lightDict.TryGetValue("TextFillColorTertiaryBrush", out var tertObj) && tertObj is SolidColorBrush tertBrush)
-                    {
-                        tertBrush.Color = tertiaryColor;
-                    }
+                        tertBrush.Color = targetLightTert;
                 }
 
-                // 2. Also register on root element resources for instant visual tree inheritance
+                // 2. Set root RequestedTheme
                 if (Content is FrameworkElement rootElem)
                 {
-                    rootElem.Resources["TextFillColorPrimaryBrush"] = new SolidColorBrush(primaryColor);
-                    rootElem.Resources["DefaultTextForegroundThemeBrush"] = new SolidColorBrush(primaryColor);
-                    rootElem.Resources["ButtonForeground"] = new SolidColorBrush(primaryColor);
-                    rootElem.Resources["ButtonForegroundPointerOver"] = new SolidColorBrush(primaryColor);
-                    rootElem.Resources["ButtonForegroundPressed"] = new SolidColorBrush(primaryColor);
-                    rootElem.Resources["TextFillColorSecondaryBrush"] = new SolidColorBrush(secondaryColor);
-                    rootElem.Resources["TextFillColorTertiaryBrush"] = new SolidColorBrush(tertiaryColor);
+                    rootElem.RequestedTheme = targetTheme;
                 }
+
+                // 3. Update Title Bar & DWM
+                UpdateTitleBarTheme(targetTheme);
+                ThemeIcon.Glyph = isDarkTheme ? "\uE708" : "\uE706";
+
+                // 4. Update Navigation Switcher
+                SwitchToTab(DashboardView.Visibility == Visibility.Visible, targetTheme);
+
+                // 5. Explicitly apply adaptive foreground brushes to all UI elements
+                ApplyAdaptiveForegrounds(primaryBrush, secondaryBrush, tertiaryBrush);
+
+                // 6. Refresh any currently-rendered dynamic groups
+                if (_cachedScanResult != null)
+                {
+                    RenderAdvancedGroups(_cachedScanResult);
+                }
+            }
+            catch { }
+            finally
+            {
+                _isApplyingTheme = false;
+            }
+        }
+
+        private void ApplyAdaptiveForegrounds(Brush primary, Brush secondary, Brush tertiary)
+        {
+            try
+            {
+                // Title Bar
+                if (AppTitleText != null) AppTitleText.Foreground = primary;
+                if (RefreshStatsIcon != null) RefreshStatsIcon.Foreground = primary;
+                if (ThemeIcon != null) ThemeIcon.Foreground = primary;
+
+                // Hero Card
+                if (HeroHealthCategoryText != null) HeroHealthCategoryText.Foreground = secondary;
+                if (HeroHealthTitle != null) HeroHealthTitle.Foreground = primary;
+                if (HeroHealthSubtitle != null) HeroHealthSubtitle.Foreground = secondary;
+                if (HeroRamPercentText != null) HeroRamPercentText.Foreground = primary;
+                if (HeroRamPercentSubtitle != null) HeroRamPercentSubtitle.Foreground = secondary;
+
+                // Bento RAM Card
+                if (CardRamTitle != null) CardRamTitle.Foreground = primary;
+                if (CardRamText != null) CardRamText.Foreground = primary;
+                if (CardBoostRamBtn != null) CardBoostRamBtn.Foreground = primary;
+
+                // Bento Disk Card
+                if (CardDiskTitle != null) CardDiskTitle.Foreground = primary;
+                if (CardDiskText != null) CardDiskText.Foreground = primary;
+                if (CardToggleCustomCleanBtn != null) CardToggleCustomCleanBtn.Foreground = primary;
+
+                // Bento CPU Card
+                if (CardCpuTitle != null) CardCpuTitle.Foreground = primary;
+                if (CardCpuText != null) CardCpuText.Foreground = primary;
+                if (CardFlushDnsBtn != null) CardFlushDnsBtn.Foreground = primary;
+
+                // Expander
+                if (AdvancedCleanExpanderTitle != null) AdvancedCleanExpanderTitle.Foreground = primary;
+                if (AdvancedCleanTotalText != null) AdvancedCleanTotalText.Foreground = secondary;
+
+                // System Tools View
+                if (ToolsHeaderTitle != null) ToolsHeaderTitle.Foreground = primary;
+                if (ToolTaskMgrTitle != null) ToolTaskMgrTitle.Foreground = primary;
+                if (ToolTaskMgrDesc != null) ToolTaskMgrDesc.Foreground = secondary;
+                if (ToolCleanMgrTitle != null) ToolCleanMgrTitle.Foreground = primary;
+                if (ToolCleanMgrDesc != null) ToolCleanMgrDesc.Foreground = secondary;
+                if (ToolDevMgmtTitle != null) ToolDevMgmtTitle.Foreground = primary;
+                if (ToolDevMgmtDesc != null) ToolDevMgmtDesc.Foreground = secondary;
+                if (ToolServicesTitle != null) ToolServicesTitle.Foreground = primary;
+                if (ToolServicesDesc != null) ToolServicesDesc.Foreground = secondary;
+                if (ToolResMonTitle != null) ToolResMonTitle.Foreground = primary;
+                if (ToolResMonDesc != null) ToolResMonDesc.Foreground = secondary;
+                if (ToolRegEditTitle != null) ToolRegEditTitle.Foreground = primary;
+                if (ToolRegEditDesc != null) ToolRegEditDesc.Foreground = secondary;
             }
             catch { }
         }
@@ -1033,7 +1088,7 @@ namespace CleanC.UI
             }
 
             bool isDark = currentTheme == ElementTheme.Dark;
-            bool useLightText = isDark || _isWallpaperDark;
+            bool useLightText = isDark ? true : _isWallpaperDark;
 
             // Frosted glass active tab background matching theme
             var activeBg = isDark 
