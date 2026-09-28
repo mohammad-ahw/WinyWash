@@ -323,25 +323,23 @@
                         </Grid>
 
                         <!-- Customization / Advanced Items Expander (For power users) -->
-                        <Expander x:Name="AdvancedCleanExpander" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" CornerRadius="10" Margin="0,4,0,0">
-                            <Expander.Resources>
-                                <StaticResource x:Key="ExpanderHeaderBackground" ResourceKey="AppCardBackgroundBrush" />
-                                <StaticResource x:Key="ExpanderHeaderBorderBrush" ResourceKey="AppCardBorderBrush" />
-                            </Expander.Resources>
-                            <Expander.Header>
-                                <Grid ColumnDefinitions="Auto,*,Auto" HorizontalAlignment="Stretch">
-                                    <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                                        <FontIcon Glyph="&#xE713;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                        <TextBlock Text="سفارشی‌سازی موارد پاکسازی (تنظیمات پیشرفته دیسک و برنامه‌ها)" FontWeight="SemiBold" FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                    <TextBlock x:Name="AdvancedCleanTotalText" Grid.Column="2" Text="بررسی نشده" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
-                                </Grid>
-                            </Expander.Header>
+                        <Border CornerRadius="10" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" Translation="0,0,16" Shadow="{StaticResource SharedCardShadow}" Margin="0,4,0,0">
+                            <Expander x:Name="AdvancedCleanExpander" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                <Expander.Header>
+                                    <Grid ColumnDefinitions="Auto,*,Auto" HorizontalAlignment="Stretch">
+                                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                                            <FontIcon Glyph="&#xE713;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
+                                            <TextBlock Text="سفارشی‌سازی موارد پاکسازی (تنظیمات پیشرفته دیسک و برنامه‌ها)" FontWeight="SemiBold" FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock x:Name="AdvancedCleanTotalText" Grid.Column="2" Text="بررسی نشده" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
+                                    </Grid>
+                                </Expander.Header>
 
-                            <Expander.Content>
-                                <StackPanel x:Name="AdvancedGroupsContainer" Spacing="10" Padding="8,12" HorizontalAlignment="Stretch" />
-                            </Expander.Content>
-                        </Expander>
+                                <Expander.Content>
+                                    <StackPanel x:Name="AdvancedGroupsContainer" Spacing="10" Padding="8,12" HorizontalAlignment="Stretch" />
+                                </Expander.Content>
+                            </Expander>
+                        </Border>
 
                         <!-- Toast / Status InfoBar -->
                         <InfoBar x:Name="StatusInfoBar" IsOpen="False" Severity="Success" IsClosable="True" Margin="0,8,0,0" />

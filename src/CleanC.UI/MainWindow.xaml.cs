@@ -989,8 +989,13 @@ namespace CleanC.UI
                 NavDashboardText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
                 NavDashboardText.Foreground = activeText;
 
-                NavToolsBtn.Background = new SolidColorBrush(Colors.Transparent);
-                NavToolsBtn.BorderThickness = new Thickness(0);
+                NavToolsBtn.Background = isDark 
+                    ? new SolidColorBrush(Colors.Transparent) 
+                    : new SolidColorBrush(ColorHelper.FromArgb(45, 255, 255, 255));
+                NavToolsBtn.BorderBrush = isDark 
+                    ? new SolidColorBrush(Colors.Transparent) 
+                    : new SolidColorBrush(ColorHelper.FromArgb(60, 255, 255, 255));
+                NavToolsBtn.BorderThickness = isDark ? new Thickness(0) : new Thickness(1);
                 NavToolsIcon.Foreground = inactiveText;
                 NavToolsText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
                 NavToolsText.Foreground = inactiveText;
@@ -1004,8 +1009,13 @@ namespace CleanC.UI
                 NavToolsText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
                 NavToolsText.Foreground = activeText;
 
-                NavDashboardBtn.Background = new SolidColorBrush(Colors.Transparent);
-                NavDashboardBtn.BorderThickness = new Thickness(0);
+                NavDashboardBtn.Background = isDark 
+                    ? new SolidColorBrush(Colors.Transparent) 
+                    : new SolidColorBrush(ColorHelper.FromArgb(45, 255, 255, 255));
+                NavDashboardBtn.BorderBrush = isDark 
+                    ? new SolidColorBrush(Colors.Transparent) 
+                    : new SolidColorBrush(ColorHelper.FromArgb(60, 255, 255, 255));
+                NavDashboardBtn.BorderThickness = isDark ? new Thickness(0) : new Thickness(1);
                 NavDashboardIcon.Foreground = inactiveText;
                 NavDashboardText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
                 NavDashboardText.Foreground = inactiveText;
