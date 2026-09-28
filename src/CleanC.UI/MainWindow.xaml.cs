@@ -976,7 +976,7 @@ namespace CleanC.UI
 
             var inactiveText = isDark 
                 ? new SolidColorBrush(ColorHelper.FromArgb(170, 255, 255, 255)) 
-                : new SolidColorBrush(ColorHelper.FromArgb(255, 51, 65, 85));
+                : new SolidColorBrush(ColorHelper.FromArgb(255, 15, 23, 42));
 
             var accentBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
 
@@ -992,7 +992,7 @@ namespace CleanC.UI
                 NavToolsBtn.Background = new SolidColorBrush(Colors.Transparent);
                 NavToolsBtn.BorderThickness = new Thickness(0);
                 NavToolsIcon.Foreground = inactiveText;
-                NavToolsText.FontWeight = Microsoft.UI.Text.FontWeights.Normal;
+                NavToolsText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
                 NavToolsText.Foreground = inactiveText;
             }
             else
@@ -1007,7 +1007,7 @@ namespace CleanC.UI
                 NavDashboardBtn.Background = new SolidColorBrush(Colors.Transparent);
                 NavDashboardBtn.BorderThickness = new Thickness(0);
                 NavDashboardIcon.Foreground = inactiveText;
-                NavDashboardText.FontWeight = Microsoft.UI.Text.FontWeights.Normal;
+                NavDashboardText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
                 NavDashboardText.Foreground = inactiveText;
             }
         }

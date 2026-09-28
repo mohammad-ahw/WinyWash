@@ -291,7 +291,7 @@
                                     </StackPanel>
                                     <TextBlock x:Name="CardRamText" Text="-- / --" FontSize="17" FontWeight="SemiBold" />
                                     <ProgressBar x:Name="CardRamProgress" Minimum="0" Maximum="100" Value="0" Height="4" CornerRadius="2" HorizontalAlignment="Stretch" />
-                                    <Button x:Name="CardBoostRamBtn" Click="QuickBoostBtn_Click" Content="آزادسازی فوری رم" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
+                                    <Button x:Name="CardBoostRamBtn" Click="QuickBoostBtn_Click" Content="آزادسازی فوری رم" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
                                 </StackPanel>
                             </Border>
 
@@ -304,7 +304,7 @@
                                     </StackPanel>
                                     <TextBlock x:Name="CardDiskText" Text="-- آزاد از --" FontSize="17" FontWeight="SemiBold" />
                                     <ProgressBar x:Name="CardDiskProgress" Minimum="0" Maximum="100" Value="0" Height="4" CornerRadius="2" HorizontalAlignment="Stretch" />
-                                    <Button x:Name="CardToggleCustomCleanBtn" Click="CardToggleCustomCleanBtn_Click" Content="سفارشی‌سازی موارد پاکسازی" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
+                                    <Button x:Name="CardToggleCustomCleanBtn" Click="CardToggleCustomCleanBtn_Click" Content="سفارشی‌سازی موارد پاکسازی" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
                                 </StackPanel>
                             </Border>
 
@@ -317,26 +317,22 @@
                                     </StackPanel>
                                     <TextBlock x:Name="CardCpuText" Text="مصرف CPU: 0%" FontSize="17" FontWeight="SemiBold" />
                                     <ProgressBar x:Name="CardCpuProgress" Minimum="0" Maximum="100" Value="0" Height="4" CornerRadius="2" HorizontalAlignment="Stretch" />
-                                    <Button x:Name="CardFlushDnsBtn" Click="CardFlushDnsBtn_Click" Content="تخلیه کش DNS" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
+                                    <Button x:Name="CardFlushDnsBtn" Click="CardFlushDnsBtn_Click" Content="تخلیه کش DNS" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
                                 </StackPanel>
                             </Border>
                         </Grid>
 
                         <!-- Customization / Advanced Items Expander (For power users) -->
-                        <Expander x:Name="AdvancedCleanExpander" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" CornerRadius="10" Margin="0,4,0,0">
+                        <Expander x:Name="AdvancedCleanExpander" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" CornerRadius="10" Margin="0,4,0,0">
                             <Expander.Resources>
-                                <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent" />
-                                <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#10808080" />
-                                <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#20808080" />
-                                <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="Transparent" />
-                                <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="Transparent" />
-                                <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="Transparent" />
+                                <StaticResource x:Key="ExpanderHeaderBackground" ResourceKey="AppCardBackgroundBrush" />
+                                <StaticResource x:Key="ExpanderHeaderBorderBrush" ResourceKey="AppCardBorderBrush" />
                             </Expander.Resources>
                             <Expander.Header>
                                 <Grid ColumnDefinitions="Auto,*,Auto" HorizontalAlignment="Stretch">
                                     <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                         <FontIcon Glyph="&#xE713;" FontSize="16" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                        <TextBlock Text="سفارشی‌سازی موارد پاکسازی (تنظیمات پیشرفته دیسک و برنامه‌ها)" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                                        <TextBlock Text="سفارشی‌سازی موارد پاکسازی (تنظیمات پیشرفته دیسک و برنامه‌ها)" FontWeight="SemiBold" FontSize="13" Foreground="{ThemeResource TextFillColorPrimaryBrush}" VerticalAlignment="Center" />
                                     </StackPanel>
                                     <TextBlock x:Name="AdvancedCleanTotalText" Grid.Column="2" Text="بررسی نشده" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Center" />
                                 </Grid>
