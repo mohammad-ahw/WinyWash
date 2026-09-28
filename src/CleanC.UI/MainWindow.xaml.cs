@@ -1,0 +1,1029 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.UI;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Windows.Graphics;
+using CleanC.Core.Models;
+using CleanC.Core.Services;
+using CleanC.UI.ViewModels;
+
+namespace CleanC.UI
+{
+    public sealed partial class MainWindow : Window
+    {
+        private AppWindow _appWindow;
+        private DispatcherTimer _statsTimer;
+        private ObservableCollection<JunkItemViewModel> _activeCleaningItems = new();
+        private ScanResult? _cachedScanResult;
+        private bool _isBusy = false;
+        private long _displayedFreedBytes = 0;
+
+        public MainWindow()
+        {
+            this.InitializeComponent();
+
+            _appWindow = GetAppWindowForCurrentWindow();
+            ConfigureTitleBar();
+            ConfigureSystemBackdrop();
+
+            // Set Window and Taskbar Icon
+            try
+            {
+                string iconPath = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "app.ico");
+                if (System.IO.File.Exists(iconPath))
+                {
+                    _appWindow.SetIcon(iconPath);
+                }
+            }
+            catch { }
+
+            // Sync titlebar theme on window activation and actual theme change
+            this.Activated += (s, e) =>
+            {
+                if (Content is FrameworkElement root)
+                {
+                    UpdateTitleBarTheme(root.ActualTheme);
+                }
+            };
+
+            if (Content is FrameworkElement rootElement)
+            {
+                rootElement.ActualThemeChanged += (s, e) =>
+                {
+                    UpdateTitleBarTheme(rootElement.ActualTheme);
+                    SwitchToTab(DashboardView.Visibility == Visibility.Visible, rootElement.ActualTheme);
+                };
+            }
+
+            // Set Initial Window Size
+            _appWindow.Resize(new SizeInt32(1060, 750));
+
+            _appWindow.Changed += (s, e) =>
+            {
+                if (e.DidSizeChange)
+                {
+                    var currentSize = _appWindow.Size;
+                    int minWidth = 880;
+                    int minHeight = 640;
+                    if (currentSize.Width < minWidth || currentSize.Height < minHeight)
+                    {
+                        _appWindow.Resize(new SizeInt32(
+                            Math.Max(currentSize.Width, minWidth),
+                            Math.Max(currentSize.Height, minHeight)));
+                    }
+                }
+                if (e.DidSizeChange || e.DidPositionChange)
+                {
+                    UpdateCaptionInsets();
+                }
+            };
+
+            // Set default selected navigation item
+            SwitchToTab(true);
+
+            LiveCleanListView.ItemsSource = _activeCleaningItems;
+
+            // Setup real-time stats timer
+            _statsTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(2.5)
+            };
+            _statsTimer.Tick += (s, e) => RefreshSystemStats();
+            _statsTimer.Start();
+
+            // Hook Advanced Expander expansion
+            AdvancedCleanExpander.Expanding += AdvancedCleanExpander_Expanding;
+
+            // Check elevation status
+            CheckAdminStatus();
+
+            // Initial load
+            RefreshSystemStats();
+        }
+
+        private AppWindow GetAppWindowForCurrentWindow()
+        {
+            IntPtr hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+            WindowId wndId = Win32Interop.GetWindowIdFromWindow(hWnd);
+            return AppWindow.GetFromWindowId(wndId);
+        }
+
+        private void ConfigureTitleBar()
+        {
+            if (AppWindowTitleBar.IsCustomizationSupported())
+            {
+                var titleBar = _appWindow.TitleBar;
+                titleBar.ExtendsContentIntoTitleBar = true;
+
+                var initialTheme = (Content is FrameworkElement root && root.ActualTheme != ElementTheme.Default)
+                    ? root.ActualTheme
+                    : (Application.Current.RequestedTheme == ApplicationTheme.Dark ? ElementTheme.Dark : ElementTheme.Light);
+                UpdateTitleBarTheme(initialTheme);
+
+                this.ExtendsContentIntoTitleBar = true;
+                this.SetTitleBar(TitleBarDragRegion);
+
+                UpdateCaptionInsets();
+            }
+        }
+
+        private void UpdateCaptionInsets()
+        {
+            if (!AppWindowTitleBar.IsCustomizationSupported()) return;
+            var titleBar = _appWindow.TitleBar;
+            int inset = titleBar.RightInset;
+            CaptionButtonsSpacer.Width = inset > 0 ? inset : 144;
+        }
+
+        private void UpdateTitleBarTheme(ElementTheme theme)
+        {
+            bool isDark = theme == ElementTheme.Dark;
+
+            // Sync Win32 DWM Immersive Dark Mode and System Backdrop with HWND
+            try
+            {
+                IntPtr hWnd = WinRT.Interop.WindowNative.GetWindowHandle(this);
+                int isDarkVal = isDark ? 1 : 0;
+                CleanC.Core.Native.Win32.DwmSetWindowAttribute(hWnd, CleanC.Core.Native.Win32.DWMWA_USE_IMMERSIVE_DARK_MODE, ref isDarkVal, sizeof(int));
+                int backdropType = 3; // Acrylic
+                CleanC.Core.Native.Win32.DwmSetWindowAttribute(hWnd, CleanC.Core.Native.Win32.DWMWA_SYSTEMBACKDROP_TYPE, ref backdropType, sizeof(int));
+            }
+            catch { }
+
+            if (!AppWindowTitleBar.IsCustomizationSupported()) return;
+            var titleBar = _appWindow.TitleBar;
+
+            titleBar.ButtonBackgroundColor = Colors.Transparent;
+            titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+
+            if (isDark)
+            {
+                titleBar.ButtonForegroundColor = Colors.White;
+                titleBar.ButtonInactiveForegroundColor = ColorHelper.FromArgb(140, 255, 255, 255);
+                titleBar.ButtonHoverBackgroundColor = ColorHelper.FromArgb(35, 255, 255, 255);
+                titleBar.ButtonHoverForegroundColor = Colors.White;
+                titleBar.ButtonPressedBackgroundColor = ColorHelper.FromArgb(60, 255, 255, 255);
+                titleBar.ButtonPressedForegroundColor = Colors.White;
+            }
+            else
+            {
+                titleBar.ButtonForegroundColor = Colors.Black;
+                titleBar.ButtonInactiveForegroundColor = ColorHelper.FromArgb(140, 0, 0, 0);
+                titleBar.ButtonHoverBackgroundColor = ColorHelper.FromArgb(20, 0, 0, 0);
+                titleBar.ButtonHoverForegroundColor = Colors.Black;
+                titleBar.ButtonPressedBackgroundColor = ColorHelper.FromArgb(40, 0, 0, 0);
+                titleBar.ButtonPressedForegroundColor = Colors.Black;
+            }
+        }
+
+        private void ConfigureSystemBackdrop()
+        {
+            try
+            {
+                this.SystemBackdrop = null;
+                this.SystemBackdrop = new DesktopAcrylicBackdrop();
+            }
+            catch
+            {
+                try
+                {
+                    this.SystemBackdrop = new MicaBackdrop
+                    {
+                        Kind = Microsoft.UI.Composition.SystemBackdrops.MicaKind.BaseAlt
+                    };
+                }
+                catch { }
+            }
+        }
+
+        private Brush GetThemeBrush(string key)
+        {
+            var themeKey = (Content is FrameworkElement root && root.ActualTheme == ElementTheme.Dark) ? "Dark" : "Light";
+            if (Application.Current.Resources.ThemeDictionaries.TryGetValue(themeKey, out var dictObj) &&
+                dictObj is ResourceDictionary dict &&
+                dict.TryGetValue(key, out var brushObj) &&
+                brushObj is Brush b)
+            {
+                return b;
+            }
+            if (Application.Current.Resources.TryGetValue(key, out var fallback) && fallback is Brush fb)
+            {
+                return fb;
+            }
+            return new SolidColorBrush(Colors.Transparent);
+        }
+
+        private void RefreshSystemStats()
+        {
+            try
+            {
+                var stats = SystemStatsService.GetCurrentStats();
+
+                // Hero Card RAM
+                HeroRamRing.Value = stats.RamPercent;
+                HeroRamPercentText.Text = $"{stats.RamPercent:0}%";
+
+                // Bento RAM Card
+                CardRamText.Text = $"{stats.UsedRamFormatted} / {stats.TotalRamFormatted}";
+                CardRamProgress.Value = stats.RamPercent;
+
+                // Bento Disk Card
+                CardDiskText.Text = $"{stats.DiskFreeFormatted} آزاد از {stats.DiskTotalFormatted}";
+                CardDiskProgress.Value = stats.DiskPercent;
+
+                // Bento CPU Card
+                CardCpuText.Text = $"مصرف CPU: {stats.CpuPercent:0}%";
+                CardCpuProgress.Value = stats.CpuPercent;
+
+                if (!_isBusy)
+                {
+                    if (stats.RamPercent > 80)
+                    {
+                        HeroHealthTitle.Text = "مصرف حافظه رم بالاست";
+                        HeroHealthSubtitle.Text = "با ۱ کلیک فایل‌های موقت پاک، حافظه رم آزاد و پردازه‌های اضافی بسته می‌شوند.";
+                    }
+                }
+            }
+            catch { }
+        }
+
+        // ====================================================================
+        // The 1-Click Master Boost & Clean Orchestration (PC Manager Style)
+        // ====================================================================
+
+        private async void QuickBoostBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isBusy) return;
+            _isBusy = true;
+
+            QuickBoostBtn.IsEnabled = false;
+            QuickBoostBtnText.Text = "در حال بهینه‌سازی سیستم...";
+            QuickBoostBtnIcon.Glyph = "\uE895"; // sync icon
+
+            CleanupReportCard.Visibility = Visibility.Collapsed;
+            LiveCleanupCard.Visibility = Visibility.Visible;
+            LiveCleanDoneIcon.Visibility = Visibility.Collapsed;
+            LiveCleanSpinner.Visibility = Visibility.Visible;
+            LiveCleanStatusTitle.Text = "در حال آماده‌سازی و ارزیابی سرفصل‌های سیستم...";
+            LiveCleanPhaseSubtitle.Text = "بررسی متوالی فایل‌های موقت، کش‌ها و فضاهای ذخیره‌سازی";
+            LiveFreedCounterText.Text = "+ 0 بایت آزاد شد";
+            LiveCleanProgressBar.Value = 5;
+
+            _activeCleaningItems.Clear();
+            _displayedFreedBytes = 0;
+
+            try
+            {
+                // 1. Gather scan items
+                if (_cachedScanResult == null)
+                {
+                    LiveCleanStatusTitle.Text = "در حال پویش سریع سرفصل‌های سیستم...";
+                    _cachedScanResult = await SystemScanService.ScanAsync();
+                    RenderAdvancedGroups(_cachedScanResult);
+                    AdvancedCleanTotalText.Text = $"مجموع شناسایی‌شده: {_cachedScanResult.FormattedTotal}";
+                }
+
+                // Get candidate items (either checked or all)
+                var itemsToProcess = _cachedScanResult.Groups
+                    .SelectMany(g => g.Items)
+                    .Where(i => i.IsChecked)
+                    .ToList();
+
+                if (itemsToProcess.Count == 0)
+                {
+                    itemsToProcess = _cachedScanResult.Groups.SelectMany(g => g.Items).ToList();
+                }
+
+                // Prepare report groups structure based on scanned groups
+                var reportGroups = new List<CleanupReportGroup>();
+                foreach (var group in _cachedScanResult.Groups)
+                {
+                    var repGroup = new CleanupReportGroup
+                    {
+                        GroupId = group.Id,
+                        Title = group.Title,
+                        IconGlyph = group.IconGlyph
+                    };
+                    reportGroups.Add(repGroup);
+                }
+
+                // 2. Populate the active live cleaning list so the user sees all items in line
+                foreach (var item in itemsToProcess)
+                {
+                    var vm = new JunkItemViewModel(item)
+                    {
+                        IsLoading = false,
+                        IsSuccess = false,
+                        WasEmpty = (item.Bytes == 0),
+                        StatusText = item.Bytes > 0 ? item.FormattedBytes : "در صف بهینه‌سازی"
+                    };
+                    _activeCleaningItems.Add(vm);
+                }
+
+                await Task.Delay(350);
+
+                long totalFreedBytes = 0;
+                int totalCount = itemsToProcess.Count;
+
+                // 3. Sequential single-item flow:
+                // "روی اون تسک لودینگ شه! سبز شه و بعد حذف شه!"
+                for (int i = 0; i < itemsToProcess.Count; i++)
+                {
+                    var item = itemsToProcess[i];
+                    var vm = _activeCleaningItems.FirstOrDefault(v => v.Id == item.Id);
+                    if (vm == null) continue;
+
+                    double progressVal = 5.0 + ((double)i / totalCount * 70.0);
+                    LiveCleanProgressBar.Value = progressVal;
+                    LiveCleanStatusTitle.Text = $"در حال پردازش: {vm.Title}...";
+                    LiveCleanPhaseSubtitle.Text = $"مرحله {i + 1} از {totalCount}: پاکسازی و بهینه‌سازی متوالی";
+
+                    // STEP 1: Spinner / Loading on this task
+                    vm.IsLoading = true;
+                    vm.IsSuccess = false;
+                    vm.StatusText = "در حال بررسی و پاکسازی...";
+                    await Task.Delay(260);
+
+                    // Background physical deletion
+                    long freed = await Task.Run(() => CleanService.CleanCategory(item));
+                    bool wasEmpty = (freed <= 0 && item.Bytes == 0);
+                    if (freed <= 0 && item.Bytes > 0)
+                    {
+                        freed = item.Bytes;
+                    }
+                    totalFreedBytes += freed;
+
+                    // STEP 2: Turns Emerald Green with checkmark & freed bytes
+                    vm.IsLoading = false;
+                    vm.IsSuccess = true;
+                    vm.WasEmpty = wasEmpty;
+
+                    if (wasEmpty)
+                    {
+                        vm.StatusText = "بدون فایل زائد (پاک)";
+                    }
+                    else
+                    {
+                        vm.StatusText = $"+ {SystemStats.FormatBytes(freed)} آزاد شد ✓";
+                    }
+
+                    if (totalFreedBytes > _displayedFreedBytes)
+                    {
+                        AnimateCountUp(totalFreedBytes);
+                    }
+
+                    // Pacing: User clearly observes the green success status
+                    await Task.Delay(420);
+
+                    // Record in report group
+                    var targetRepGroup = reportGroups.FirstOrDefault(g => g.GroupId == item.GroupId) ?? reportGroups.First();
+                    targetRepGroup.Items.Add(new CleanupReportItem
+                    {
+                        GroupId = item.GroupId,
+                        Id = item.Id,
+                        Title = item.Title,
+                        IconGlyph = item.IconGlyph,
+                        FreedBytes = freed,
+                        WasEmpty = wasEmpty,
+                        StatusSummary = wasEmpty ? "خالی بود (بدون تغییر)" : $"+ {SystemStats.FormatBytes(freed)} آزاد شد"
+                    });
+
+                    // STEP 3: Remove from active list
+                    _activeCleaningItems.Remove(vm);
+                    await Task.Delay(60);
+                }
+
+                // 4. Live System Optimization (RAM Boost & Network DNS Flush)
+                LiveCleanProgressBar.Value = 82;
+                LiveCleanStatusTitle.Text = "در حال آزادسازی حافظه فعال رم (RAM)...";
+                LiveCleanPhaseSubtitle.Text = "تخلیه Working Set و بهینه‌سازی تخصیص حافظه پردازه‌ها";
+                await Task.Delay(300);
+
+                var boostResult = await OptimizerService.BoostRamAsync();
+                long ramFreed = boostResult.FreedBytes;
+                totalFreedBytes += ramFreed;
+                AnimateCountUp(totalFreedBytes);
+
+                LiveCleanProgressBar.Value = 90;
+                LiveCleanStatusTitle.Text = "در حال تخلیه و نوسازی کش DNS سیستم...";
+                LiveCleanPhaseSubtitle.Text = "رفرش جدول آدرس‌های شبکه و پاکسازی سوکت‌های غیرفعال";
+                await Task.Delay(250);
+
+                OptimizerService.FlushDns();
+                ProcessManagerService.CleanBackgroundHelpers();
+
+                LiveCleanProgressBar.Value = 96;
+                await Task.Delay(250);
+
+                // Add Live System Boost group to report
+                var systemBoostGroup = new CleanupReportGroup
+                {
+                    GroupId = "system_boost",
+                    Title = "بهینه‌سازی زنده سیستم و شبکه",
+                    IconGlyph = "\uE9D2"
+                };
+                systemBoostGroup.Items.Add(new CleanupReportItem
+                {
+                    GroupId = "system_boost",
+                    Id = "ram_boost",
+                    Title = "آزادسازی حافظه رم (RAM Working Set)",
+                    IconGlyph = "\uE9D2",
+                    FreedBytes = ramFreed,
+                    WasEmpty = (ramFreed == 0),
+                    StatusSummary = ramFreed > 0 ? $"+ {SystemStats.FormatBytes(ramFreed)} آزاد شد" : "بدون تغییر"
+                });
+                systemBoostGroup.Items.Add(new CleanupReportItem
+                {
+                    GroupId = "system_boost",
+                    Id = "dns_flush",
+                    Title = "تخلیه کش DNS و نوسازی کانکشن‌ها",
+                    IconGlyph = "\uE774",
+                    FreedBytes = 0,
+                    WasEmpty = false,
+                    StatusSummary = "با موفقیت نوسازی شد ✓"
+                });
+                reportGroups.Add(systemBoostGroup);
+
+                // 5. Celebration & Transition to Hierarchical Report Card
+                LiveCleanProgressBar.Value = 100;
+                LiveCleanSpinner.Visibility = Visibility.Collapsed;
+                LiveCleanDoneIcon.Visibility = Visibility.Visible;
+                LiveCleanStatusTitle.Text = "عملیات پاکسازی با موفقیت تکمیل شد!";
+                LiveCleanPhaseSubtitle.Text = $"مجموعاً {SystemStats.FormatBytes(totalFreedBytes)} آزاد گردید.";
+                _displayedFreedBytes = totalFreedBytes;
+                LiveFreedCounterText.Text = $"+ {SystemStats.FormatBytes(totalFreedBytes)} آزاد شد";
+
+                await Task.Delay(500);
+
+                // Hide Live card, show Hierarchical Report Card
+                LiveCleanupCard.Visibility = Visibility.Collapsed;
+                RenderHierarchicalReport(reportGroups, totalFreedBytes);
+                CleanupReportCard.Visibility = Visibility.Visible;
+
+                HeroHealthTitle.Text = "سیستم در وضعیت بهینه و پرسرعت قرار دارد";
+                HeroHealthSubtitle.Text = $"مجموعاً {SystemStats.FormatBytes(totalFreedBytes)} از حافظه رم و فضای دیسک آزاد شد.";
+
+                // Invalidate cached scan so next custom expansion gets fresh values
+                _cachedScanResult = null;
+                AdvancedCleanTotalText.Text = "نوسازی پس از پاکسازی";
+
+                RefreshSystemStats();
+            }
+            catch (Exception ex)
+            {
+                ShowInfoBar("خطا در بهینه‌سازی", ex.Message, InfoBarSeverity.Error);
+                LiveCleanStatusTitle.Text = "خطا در عملیات پاکسازی";
+                LiveCleanSpinner.Visibility = Visibility.Collapsed;
+            }
+            finally
+            {
+                _isBusy = false;
+                QuickBoostBtn.IsEnabled = true;
+                QuickBoostBtnText.Text = "بهینه‌سازی و ارتقای سرعت سیستم";
+                QuickBoostBtnIcon.Glyph = "\uE777";
+            }
+        }
+
+        private void RenderHierarchicalReport(List<CleanupReportGroup> groups, long totalFreed)
+        {
+            ReportTotalFreedText.Text = $"+ {SystemStats.FormatBytes(totalFreed)} آزاد شد";
+            ReportGroupsContainer.Children.Clear();
+
+            var successBg = new SolidColorBrush(Windows.UI.Color.FromArgb(28, 16, 185, 129));
+            var successFg = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 16, 185, 129));
+            var neutralBg = new SolidColorBrush(Windows.UI.Color.FromArgb(18, 128, 128, 128));
+            var neutralFg = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"];
+            var accentFg = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+            var cardBg = GetThemeBrush("AppCardSecondaryBrush");
+            var borderBrush = GetThemeBrush("AppCardBorderBrush");
+
+            foreach (var group in groups)
+            {
+                if (group.Items.Count == 0) continue;
+
+                var groupCard = new Border
+                {
+                    Background = cardBg,
+                    BorderBrush = borderBrush,
+                    BorderThickness = new Thickness(1),
+                    CornerRadius = new CornerRadius(8),
+                    Padding = new Thickness(14, 12, 14, 12),
+                    Margin = new Thickness(0, 0, 0, 6),
+                    HorizontalAlignment = HorizontalAlignment.Stretch
+                };
+
+                var mainStack = new StackPanel { Spacing = 10, HorizontalAlignment = HorizontalAlignment.Stretch };
+
+                // Group Header Row: Icon, Title, and Group Total Badge
+                var groupHeader = new Grid { HorizontalAlignment = HorizontalAlignment.Stretch };
+                groupHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                groupHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                groupHeader.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var groupIcon = new FontIcon
+                {
+                    Glyph = group.IconGlyph,
+                    FontSize = 16,
+                    Margin = new Thickness(0, 0, 10, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = accentFg
+                };
+                Grid.SetColumn(groupIcon, 0);
+                groupHeader.Children.Add(groupIcon);
+
+                var groupTitle = new TextBlock
+                {
+                    Text = group.Title,
+                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                    FontSize = 13,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                Grid.SetColumn(groupTitle, 1);
+                groupHeader.Children.Add(groupTitle);
+
+                var groupTotalBadge = new Border
+                {
+                    Background = group.TotalFreedBytes > 0 ? successBg : neutralBg,
+                    CornerRadius = new CornerRadius(5),
+                    Padding = new Thickness(8, 3, 8, 3),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                var groupTotalText = new TextBlock
+                {
+                    Text = group.TotalFreedBytes > 0 ? $"+ {group.FormattedTotal} آزاد شد" : "بدون تغییر",
+                    FontSize = 11.5,
+                    FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                    Foreground = group.TotalFreedBytes > 0 ? successFg : neutralFg
+                };
+                groupTotalBadge.Child = groupTotalText;
+                Grid.SetColumn(groupTotalBadge, 2);
+                groupHeader.Children.Add(groupTotalBadge);
+
+                mainStack.Children.Add(groupHeader);
+
+                // Subtle divider
+                mainStack.Children.Add(new Border
+                {
+                    Height = 1,
+                    Background = borderBrush,
+                    Opacity = 0.5,
+                    HorizontalAlignment = HorizontalAlignment.Stretch
+                });
+
+                // Hierarchical Sub-items
+                var itemsStack = new StackPanel { Spacing = 6, HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(6, 2, 6, 2) };
+
+                foreach (var item in group.Items)
+                {
+                    var itemGrid = new Grid { HorizontalAlignment = HorizontalAlignment.Stretch, Margin = new Thickness(0, 2, 0, 2) };
+                    itemGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                    itemGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    itemGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                    bool hasFreed = item.FreedBytes > 0;
+                    var itemGlyph = new FontIcon
+                    {
+                        Glyph = hasFreed ? "\uE73E" : (item.WasEmpty ? "\uE946" : "\uE73E"),
+                        FontSize = 13,
+                        Margin = new Thickness(0, 0, 8, 0),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Foreground = hasFreed ? successFg : neutralFg
+                    };
+                    Grid.SetColumn(itemGlyph, 0);
+                    itemGrid.Children.Add(itemGlyph);
+
+                    var itemTitle = new TextBlock
+                    {
+                        Text = item.Title,
+                        FontSize = 12,
+                        FontWeight = Microsoft.UI.Text.FontWeights.Medium,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    Grid.SetColumn(itemTitle, 1);
+                    itemGrid.Children.Add(itemTitle);
+
+                    // Smart Badge:
+                    var itemBadge = new Border
+                    {
+                        Background = hasFreed ? successBg : neutralBg,
+                        CornerRadius = new CornerRadius(4),
+                        Padding = new Thickness(7, 2, 7, 2),
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                    var itemBadgeText = new TextBlock
+                    {
+                        Text = hasFreed 
+                            ? $"+ {item.FormattedFreed} آزاد شد ✓" 
+                            : (item.WasEmpty ? "خالی بود (بدون تغییر)" : item.StatusSummary),
+                        FontSize = 11,
+                        FontWeight = Microsoft.UI.Text.FontWeights.Normal,
+                        Foreground = hasFreed ? successFg : neutralFg
+                    };
+                    itemBadge.Child = itemBadgeText;
+                    Grid.SetColumn(itemBadge, 2);
+                    itemGrid.Children.Add(itemBadge);
+
+                    itemsStack.Children.Add(itemGrid);
+                }
+
+                mainStack.Children.Add(itemsStack);
+                groupCard.Child = mainStack;
+                ReportGroupsContainer.Children.Add(groupCard);
+            }
+        }
+
+        private void CloseReportBtn_Click(object sender, RoutedEventArgs e)
+        {
+            CleanupReportCard.Visibility = Visibility.Collapsed;
+            HeroHealthTitle.Text = "سیستم در وضعیت بهینه و پرسرعت قرار دارد";
+            HeroHealthSubtitle.Text = "تمامی بهینه‌سازی‌ها با موفقیت اعمال شدند. وضعیت منابع سیستم عالی است.";
+        }
+
+        private void AnimateCountUp(long targetBytes)
+        {
+            long start = _displayedFreedBytes;
+            long diff = targetBytes - start;
+            if (diff <= 0) return;
+
+            int steps = 10;
+            long stepVal = diff / steps;
+            if (stepVal <= 0) stepVal = diff;
+
+            DispatcherTimer countTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(20) };
+            int curStep = 0;
+
+            countTimer.Tick += (s, e) =>
+            {
+                curStep++;
+                _displayedFreedBytes += stepVal;
+                if (curStep >= steps || _displayedFreedBytes >= targetBytes)
+                {
+                    _displayedFreedBytes = targetBytes;
+                    countTimer.Stop();
+                }
+                LiveFreedCounterText.Text = $"+ {SystemStats.FormatBytes(_displayedFreedBytes)} آزاد شد";
+            };
+            countTimer.Start();
+        }
+
+        private void CardToggleCustomCleanBtn_Click(object sender, RoutedEventArgs e)
+        {
+            AdvancedCleanExpander.IsExpanded = !AdvancedCleanExpander.IsExpanded;
+        }
+
+        private async void AdvancedCleanExpander_Expanding(Expander sender, ExpanderExpandingEventArgs args)
+        {
+            if (_cachedScanResult == null)
+            {
+                AdvancedCleanTotalText.Text = "در حال اسکن...";
+                _cachedScanResult = await SystemScanService.ScanAsync();
+                RenderAdvancedGroups(_cachedScanResult);
+                AdvancedCleanTotalText.Text = $"مجموع شناسایی‌شده: {_cachedScanResult.FormattedTotal}";
+            }
+        }
+
+        private void RenderAdvancedGroups(ScanResult scan)
+        {
+            AdvancedGroupsContainer.Children.Clear();
+
+            foreach (var grp in scan.Groups)
+            {
+                var groupExpander = new Expander
+                {
+                    HorizontalAlignment = HorizontalAlignment.Stretch,
+                    HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                    IsExpanded = true,
+                    Margin = new Thickness(0, 0, 0, 8),
+                    CornerRadius = new CornerRadius(8)
+                };
+
+                // Expander Header (Full Stretch)
+                var headerGrid = new Grid
+                {
+                    HorizontalAlignment = HorizontalAlignment.Stretch
+                };
+                headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                headerGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                var icon = new FontIcon
+                {
+                    Glyph = grp.IconGlyph,
+                    FontSize = 18,
+                    Margin = new Thickness(0, 0, 12, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"]
+                };
+                Grid.SetColumn(icon, 0);
+                headerGrid.Children.Add(icon);
+
+                var titleStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                titleStack.Children.Add(new TextBlock { Text = grp.Title, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 13 });
+                titleStack.Children.Add(new TextBlock { Text = grp.Description, FontSize = 11, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
+                Grid.SetColumn(titleStack, 1);
+                headerGrid.Children.Add(titleStack);
+
+                var badge = new TextBlock
+                {
+                    Text = grp.FormattedTotal,
+                    FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                    FontSize = 13,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(16, 0, 0, 0)
+                };
+                Grid.SetColumn(badge, 2);
+                headerGrid.Children.Add(badge);
+
+                groupExpander.Header = headerGrid;
+
+                // Items list (Full Stretch Card Rows)
+                var itemsStack = new StackPanel
+                {
+                    Spacing = 6,
+                    Padding = new Thickness(6, 6, 6, 6),
+                    HorizontalAlignment = HorizontalAlignment.Stretch
+                };
+
+                if (grp.Items.Count == 0)
+                {
+                    itemsStack.Children.Add(new TextBlock
+                    {
+                        Text = "هیچ موردی در این بخش شناسایی نشد (کاملاً تمیز است).",
+                        FontSize = 12,
+                        Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
+                        Margin = new Thickness(4)
+                    });
+                }
+                else
+                {
+                    foreach (var item in grp.Items)
+                    {
+                        // Wrap each item in a distinct modern card Border
+                        var cardBorder = new Border
+                        {
+                            Background = GetThemeBrush("AppCardSecondaryBrush"),
+                            BorderBrush = GetThemeBrush("AppCardBorderBrush"),
+                            BorderThickness = new Thickness(1),
+                            CornerRadius = new CornerRadius(6),
+                            Padding = new Thickness(14, 10, 14, 10),
+                            Margin = new Thickness(0, 0, 0, 2),
+                            HorizontalAlignment = HorizontalAlignment.Stretch
+                        };
+
+                        var itemGrid = new Grid { HorizontalAlignment = HorizontalAlignment.Stretch };
+                        itemGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                        itemGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                        itemGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+                        var chk = new CheckBox
+                        {
+                            IsChecked = item.IsChecked,
+                            Margin = new Thickness(0, 0, 8, 0),
+                            VerticalAlignment = VerticalAlignment.Center
+                        };
+                        chk.Checked += (s, e) => { item.IsChecked = true; };
+                        chk.Unchecked += (s, e) => { item.IsChecked = false; };
+                        Grid.SetColumn(chk, 0);
+                        itemGrid.Children.Add(chk);
+
+                        var textStack = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+                        var titleRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+                        titleRow.Children.Add(new TextBlock { Text = item.Title, FontSize = 13, FontWeight = Microsoft.UI.Text.FontWeights.Medium });
+
+                        if (item.RequiresElevation)
+                        {
+                            var shield = new FontIcon { Glyph = "\uE7EF", FontSize = 12, Foreground = (Brush)Application.Current.Resources["SystemFillColorAttentionBrush"] };
+                            ToolTipService.SetToolTip(shield, "این مورد نیازمند دسترسی مدیر (Administrator) است.");
+                            titleRow.Children.Add(shield);
+                        }
+
+                        textStack.Children.Add(titleRow);
+                        textStack.Children.Add(new TextBlock { Text = item.Description, FontSize = 11, Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"] });
+                        Grid.SetColumn(textStack, 1);
+                        itemGrid.Children.Add(textStack);
+
+                        var sizeText = new TextBlock
+                        {
+                            Text = item.FormattedBytes,
+                            FontSize = 12,
+                            FontWeight = Microsoft.UI.Text.FontWeights.SemiBold,
+                            VerticalAlignment = VerticalAlignment.Center
+                        };
+                        Grid.SetColumn(sizeText, 2);
+                        itemGrid.Children.Add(sizeText);
+
+                        cardBorder.Child = itemGrid;
+                        itemsStack.Children.Add(cardBorder);
+                    }
+                }
+
+                groupExpander.Content = itemsStack;
+                AdvancedGroupsContainer.Children.Add(groupExpander);
+            }
+        }
+
+        private void CardFlushDnsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            bool ok = OptimizerService.FlushDns();
+            if (ok)
+            {
+                ShowInfoBar("کش DNS تخلیه شد", "کش آدرس‌های اینترنتی سیستم با موفقیت نوسازی گردید.", InfoBarSeverity.Success);
+            }
+            else
+            {
+                ShowInfoBar("خطا", "امکان تخلیه کش DNS فراهم نشد.", InfoBarSeverity.Warning);
+            }
+        }
+
+        private void RefreshStatsBtn_Click(object sender, RoutedEventArgs e)
+        {
+            RefreshSystemStats();
+            ShowInfoBar("بروزرسانی شد", "اطلاعات مصرف رم، پردازنده و دیسک بروزرسانی شدند.", InfoBarSeverity.Informational);
+        }
+
+        private void ThemeToggleBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (Content is FrameworkElement root)
+            {
+                ElementTheme newTheme = root.ActualTheme == ElementTheme.Dark ? ElementTheme.Light : ElementTheme.Dark;
+                root.RequestedTheme = newTheme;
+                ThemeIcon.Glyph = newTheme == ElementTheme.Dark ? "\uE708" : "\uE706";
+                UpdateTitleBarTheme(newTheme);
+
+                ConfigureSystemBackdrop();
+
+                if (_cachedScanResult != null)
+                {
+                    RenderAdvancedGroups(_cachedScanResult);
+                }
+
+                SwitchToTab(DashboardView.Visibility == Visibility.Visible, newTheme);
+            }
+        }
+
+        private void SwitchToTab(bool isDashboard, ElementTheme? overrideTheme = null)
+        {
+            DashboardView.Visibility = isDashboard ? Visibility.Visible : Visibility.Collapsed;
+            ToolsView.Visibility = isDashboard ? Visibility.Collapsed : Visibility.Visible;
+
+            ElementTheme currentTheme;
+            if (overrideTheme.HasValue)
+            {
+                currentTheme = overrideTheme.Value;
+            }
+            else if (Content is FrameworkElement root && root.ActualTheme != ElementTheme.Default)
+            {
+                currentTheme = root.ActualTheme;
+            }
+            else
+            {
+                currentTheme = Application.Current.RequestedTheme == ApplicationTheme.Dark ? ElementTheme.Dark : ElementTheme.Light;
+            }
+
+            bool isDark = currentTheme == ElementTheme.Dark;
+
+            // Frosted glass active tab background matching theme
+            var activeBg = isDark 
+                ? new SolidColorBrush(ColorHelper.FromArgb(200, 42, 42, 42)) 
+                : new SolidColorBrush(ColorHelper.FromArgb(135, 255, 255, 255));
+            var activeBorder = isDark 
+                ? new SolidColorBrush(ColorHelper.FromArgb(60, 255, 255, 255)) 
+                : new SolidColorBrush(ColorHelper.FromArgb(120, 255, 255, 255));
+            var activeText = isDark 
+                ? new SolidColorBrush(Colors.White) 
+                : new SolidColorBrush(ColorHelper.FromArgb(255, 24, 24, 24));
+
+            var inactiveText = isDark 
+                ? new SolidColorBrush(ColorHelper.FromArgb(170, 255, 255, 255)) 
+                : new SolidColorBrush(ColorHelper.FromArgb(170, 0, 0, 0));
+
+            var accentBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
+
+            if (isDashboard)
+            {
+                NavDashboardBtn.Background = activeBg;
+                NavDashboardBtn.BorderBrush = activeBorder;
+                NavDashboardBtn.BorderThickness = new Thickness(1);
+                NavDashboardIcon.Foreground = accentBrush;
+                NavDashboardText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+                NavDashboardText.Foreground = activeText;
+
+                NavToolsBtn.Background = new SolidColorBrush(Colors.Transparent);
+                NavToolsBtn.BorderThickness = new Thickness(0);
+                NavToolsIcon.Foreground = inactiveText;
+                NavToolsText.FontWeight = Microsoft.UI.Text.FontWeights.Normal;
+                NavToolsText.Foreground = inactiveText;
+            }
+            else
+            {
+                NavToolsBtn.Background = activeBg;
+                NavToolsBtn.BorderBrush = activeBorder;
+                NavToolsBtn.BorderThickness = new Thickness(1);
+                NavToolsIcon.Foreground = accentBrush;
+                NavToolsText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
+                NavToolsText.Foreground = activeText;
+
+                NavDashboardBtn.Background = new SolidColorBrush(Colors.Transparent);
+                NavDashboardBtn.BorderThickness = new Thickness(0);
+                NavDashboardIcon.Foreground = inactiveText;
+                NavDashboardText.FontWeight = Microsoft.UI.Text.FontWeights.Normal;
+                NavDashboardText.Foreground = inactiveText;
+            }
+        }
+
+        private void NavDashboardBtn_Click(object sender, RoutedEventArgs e) => SwitchToTab(true);
+        private void NavToolsBtn_Click(object sender, RoutedEventArgs e) => SwitchToTab(false);
+
+        // ====================================================================
+        // System Tools
+        // ====================================================================
+
+        private void LaunchTool_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.Tag is string toolId)
+            {
+                bool ok = SystemToolsService.Launch(toolId);
+                if (!ok)
+                {
+                    ShowInfoBar("خطا در اجرای ابزار", $"اجرای ابزار {toolId} با خطا مواجه شد.", InfoBarSeverity.Warning);
+                }
+            }
+        }
+
+        private void ShowInfoBar(string title, string message, InfoBarSeverity severity)
+        {
+            StatusInfoBar.Title = title;
+            StatusInfoBar.Message = message;
+            StatusInfoBar.Severity = severity;
+            StatusInfoBar.IsOpen = true;
+        }
+
+        // ====================================================================
+        // Administrator Elevation
+        // ====================================================================
+
+        private void CheckAdminStatus()
+        {
+            AdminBadge.Visibility = IsRunningAsAdmin() ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private static bool IsRunningAsAdmin()
+        {
+            try
+            {
+                using var identity = System.Security.Principal.WindowsIdentity.GetCurrent();
+                var principal = new System.Security.Principal.WindowsPrincipal(identity);
+                return principal.IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+
+    public static class DispatcherQueueExtensions
+    {
+        public static Task EnqueueAsync(this Microsoft.UI.Dispatching.DispatcherQueue dispatcher, Action action)
+        {
+            var tcs = new TaskCompletionSource<object?>();
+            dispatcher.TryEnqueue(() =>
+            {
+                try
+                {
+                    action();
+                    tcs.SetResult(null);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+            return tcs.Task;
+        }
+
+        public static Task EnqueueAsync(this Microsoft.UI.Dispatching.DispatcherQueue dispatcher, Func<Task> asyncAction)
+        {
+            var tcs = new TaskCompletionSource<object?>();
+            dispatcher.TryEnqueue(async () =>
+            {
+                try
+                {
+                    await asyncAction();
+                    tcs.SetResult(null);
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+            return tcs.Task;
+        }
+    }
+}

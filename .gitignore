@@ -1,0 +1,36 @@
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+## Visual Studio cache & temporary files
+.vs/
+Generated\ Files/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## Publish and Archive directories / files
+publish/
+Publish/
+*.zip
+*.7z
+*.rar
+*.tar.gz
+
+## Windows / OS generated
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store

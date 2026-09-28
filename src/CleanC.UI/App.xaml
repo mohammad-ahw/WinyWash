@@ -1,0 +1,97 @@
+<Application
+    x:Class="CleanC.UI.App"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Light">
+                    <!-- Transparent canvas allowing native Desktop Acrylic frosted glass -->
+                    <SolidColorBrush x:Key="WindowCanvasBrush" Color="#00000000" />
+                    
+                    <!-- Highly Translucent Frosted Glass Card: 20% white allows strong acrylic blur to shine through while keeping a Glassmorphism tint -->
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#33FFFFFF" />
+                    <!-- Subtle inner highlight via gradient border -->
+                    <LinearGradientBrush x:Key="AppCardBorderBrush" StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#C0FFFFFF" Offset="0.0" />
+                        <GradientStop Color="#20FFFFFF" Offset="1.0" />
+                    </LinearGradientBrush>
+                    
+                    <!-- Secondary surface inside cards (chips, sub-cards) -->
+                    <SolidColorBrush x:Key="AppCardSecondaryBrush" Color="#40F0F4F8" />
+                    
+                    <!-- Translucent Glass Header -->
+                    <SolidColorBrush x:Key="AppHeaderBackgroundBrush" Color="#2AFFFFFF" />
+                    <LinearGradientBrush x:Key="AppHeaderBorderBrush" StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#40FFFFFF" Offset="0.0" />
+                        <GradientStop Color="#10000000" Offset="1.0" />
+                    </LinearGradientBrush>
+                    
+                    <!-- Quick action button pill background -->
+                    <SolidColorBrush x:Key="AppHeaderPillBrush" Color="#12000000" />
+                    <SolidColorBrush x:Key="AppHeaderPillHoverBrush" Color="#1E000000" />
+                    
+                    <!-- Running as Admin Pill Badge -->
+                    <SolidColorBrush x:Key="AdminBadgeBackgroundBrush" Color="#180078D4" />
+                    <SolidColorBrush x:Key="AdminBadgeBorderBrush" Color="#350078D4" />
+                    <SolidColorBrush x:Key="AdminBadgeForegroundBrush" Color="#0067C0" />
+                </ResourceDictionary>
+
+                <ResourceDictionary x:Key="Dark">
+                    <!-- Transparent canvas allowing native Desktop Acrylic frosted glass -->
+                    <SolidColorBrush x:Key="WindowCanvasBrush" Color="#00000000" />
+                    
+                    <!-- Highly Translucent Frosted Dark Card: 20% dark slate allows strong acrylic blur to shine through -->
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#331A1A1A" />
+                    <!-- Subtle inner highlight via gradient border -->
+                    <LinearGradientBrush x:Key="AppCardBorderBrush" StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#45FFFFFF" Offset="0.0" />
+                        <GradientStop Color="#05FFFFFF" Offset="1.0" />
+                    </LinearGradientBrush>
+                    
+                    <!-- Secondary surface inside cards -->
+                    <SolidColorBrush x:Key="AppCardSecondaryBrush" Color="#33303030" />
+                    
+                    <!-- Translucent Glass Header -->
+                    <SolidColorBrush x:Key="AppHeaderBackgroundBrush" Color="#2A141414" />
+                    <LinearGradientBrush x:Key="AppHeaderBorderBrush" StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#25FFFFFF" Offset="0.0" />
+                        <GradientStop Color="#05FFFFFF" Offset="1.0" />
+                    </LinearGradientBrush>
+                    
+                    <!-- Quick action button pill background -->
+                    <SolidColorBrush x:Key="AppHeaderPillBrush" Color="#20FFFFFF" />
+                    <SolidColorBrush x:Key="AppHeaderPillHoverBrush" Color="#35FFFFFF" />
+                    
+                    <!-- Running as Admin Pill Badge -->
+                    <SolidColorBrush x:Key="AdminBadgeBackgroundBrush" Color="#2560CDFF" />
+                    <SolidColorBrush x:Key="AdminBadgeBorderBrush" Color="#4560CDFF" />
+                    <SolidColorBrush x:Key="AdminBadgeForegroundBrush" Color="#60CDFF" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- Professional Windows 11 Boost Button Brushes -->
+            <LinearGradientBrush x:Key="BoostGradientBrush" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#0067C0" Offset="0.0" />
+                <GradientStop Color="#0078D4" Offset="1.0" />
+            </LinearGradientBrush>
+
+            <LinearGradientBrush x:Key="BoostHoverGradientBrush" StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#0078D4" Offset="0.0" />
+                <GradientStop Color="#1084E3" Offset="1.0" />
+            </LinearGradientBrush>
+
+            <SolidColorBrush x:Key="BoostBorderBrush" Color="#300078D4" />
+
+            <!-- Fluent 2 / Glassmorphism Design Tokens -->
+            <CornerRadius x:Key="CardCornerRadius">16</CornerRadius>
+            <CornerRadius x:Key="HeroCornerRadius">20</CornerRadius>
+            <CornerRadius x:Key="ButtonCornerRadius">8</CornerRadius>
+            <FontFamily x:Key="AppFontFamily">Segoe UI Variable, Vazirmatn, Segoe UI</FontFamily>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
