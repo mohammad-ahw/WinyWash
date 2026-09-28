@@ -287,9 +287,9 @@
                                 <StackPanel Spacing="9" HorizontalAlignment="Stretch">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xE9D2;" FontSize="15" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                        <TextBlock Text="حافظه رم (RAM)" FontWeight="Medium" FontSize="12.5" />
+                                        <TextBlock Text="حافظه رم (RAM)" FontWeight="Medium" FontSize="12.5" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     </StackPanel>
-                                    <TextBlock x:Name="CardRamText" Text="-- / --" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="CardRamText" Text="-- / --" FontSize="17" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     <ProgressBar x:Name="CardRamProgress" Minimum="0" Maximum="100" Value="0" Height="4" CornerRadius="2" HorizontalAlignment="Stretch" />
                                     <Button x:Name="CardBoostRamBtn" Click="QuickBoostBtn_Click" Content="آزادسازی فوری رم" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
                                 </StackPanel>
@@ -300,9 +300,9 @@
                                 <StackPanel Spacing="9" HorizontalAlignment="Stretch">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xEDA2;" FontSize="15" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                        <TextBlock Text="فضای درایو C ویندوز" FontWeight="Medium" FontSize="12.5" />
+                                        <TextBlock Text="فضای درایو C ویندوز" FontWeight="Medium" FontSize="12.5" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     </StackPanel>
-                                    <TextBlock x:Name="CardDiskText" Text="-- آزاد از --" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="CardDiskText" Text="-- آزاد از --" FontSize="17" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     <ProgressBar x:Name="CardDiskProgress" Minimum="0" Maximum="100" Value="0" Height="4" CornerRadius="2" HorizontalAlignment="Stretch" />
                                     <Button x:Name="CardToggleCustomCleanBtn" Click="CardToggleCustomCleanBtn_Click" Content="سفارشی‌سازی موارد پاکسازی" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
                                 </StackPanel>
@@ -313,9 +313,9 @@
                                 <StackPanel Spacing="9" HorizontalAlignment="Stretch">
                                     <StackPanel Orientation="Horizontal" Spacing="8">
                                         <FontIcon Glyph="&#xE774;" FontSize="15" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
-                                        <TextBlock Text="وضعیت پردازنده و شبکه" FontWeight="Medium" FontSize="12.5" />
+                                        <TextBlock Text="وضعیت پردازنده و شبکه" FontWeight="Medium" FontSize="12.5" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     </StackPanel>
-                                    <TextBlock x:Name="CardCpuText" Text="مصرف CPU: 0%" FontSize="17" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="CardCpuText" Text="مصرف CPU: 0%" FontSize="17" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                     <ProgressBar x:Name="CardCpuProgress" Minimum="0" Maximum="100" Value="0" Height="4" CornerRadius="2" HorizontalAlignment="Stretch" />
                                     <Button x:Name="CardFlushDnsBtn" Click="CardFlushDnsBtn_Click" Content="تخلیه کش DNS" HorizontalAlignment="Stretch" Height="32" Padding="0" CornerRadius="6" FontSize="11.5" FontWeight="SemiBold" Foreground="{ThemeResource TextFillColorPrimaryBrush}" Background="{ThemeResource AppCardSecondaryBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" />
                                 </StackPanel>
@@ -325,6 +325,16 @@
                         <!-- Customization / Advanced Items Expander (For power users) -->
                         <Border CornerRadius="10" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}" BorderThickness="1" Translation="0,0,16" Shadow="{StaticResource SharedCardShadow}" Margin="0,4,0,0">
                             <Expander x:Name="AdvancedCleanExpander" Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                                <Expander.Resources>
+                                    <SolidColorBrush x:Key="ExpanderHeaderBackground" Color="Transparent" />
+                                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPointerOver" Color="#15FFFFFF" />
+                                    <SolidColorBrush x:Key="ExpanderHeaderBackgroundPressed" Color="#25FFFFFF" />
+                                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrush" Color="Transparent" />
+                                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPointerOver" Color="Transparent" />
+                                    <SolidColorBrush x:Key="ExpanderHeaderBorderBrushPressed" Color="Transparent" />
+                                    <SolidColorBrush x:Key="ExpanderContentBackground" Color="Transparent" />
+                                    <SolidColorBrush x:Key="ExpanderContentBorderBrush" Color="Transparent" />
+                                </Expander.Resources>
                                 <Expander.Header>
                                     <Grid ColumnDefinitions="Auto,*,Auto" HorizontalAlignment="Stretch">
                                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -353,14 +363,14 @@
                 <ScrollViewer x:Name="ToolsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <Grid HorizontalAlignment="Stretch">
                         <StackPanel x:Name="ToolsContentPanel" Spacing="12" HorizontalAlignment="Stretch" MaxWidth="960">
-                        <TextBlock Text="ابزارهای رسمی و عیب‌یابی سیستم‌عامل ویندوز" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" />
+                        <TextBlock Text="ابزارهای رسمی و عیب‌یابی سیستم‌عامل ویندوز" FontWeight="Bold" FontSize="16" Margin="0,0,0,8" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                         
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12" RowSpacing="12" HorizontalAlignment="Stretch">
                             <Button Click="LaunchTool_Click" Tag="taskmgr" HorizontalAlignment="Stretch" Padding="16,18" CornerRadius="10" Background="{ThemeResource AppCardBackgroundBrush}" BorderBrush="{ThemeResource AppCardBorderBrush}">
                                 <StackPanel Orientation="Horizontal" Spacing="14">
                                     <FontIcon Glyph="&#xE9D2;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
                                     <StackPanel>
-                                        <TextBlock Text="Task Manager" FontWeight="SemiBold" FontSize="14" />
+                                        <TextBlock Text="Task Manager" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                         <TextBlock Text="مدیریت وظایف و رم ویندوز" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                 </StackPanel>
@@ -370,7 +380,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="14">
                                     <FontIcon Glyph="&#xE74D;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
                                     <StackPanel>
-                                        <TextBlock Text="Disk Cleanup" FontWeight="SemiBold" FontSize="14" />
+                                        <TextBlock Text="Disk Cleanup" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                         <TextBlock Text="ابزار رسمی پاک‌سازی دیسک" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                 </StackPanel>
@@ -380,7 +390,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="14">
                                     <FontIcon Glyph="&#xE772;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
                                     <StackPanel>
-                                        <TextBlock Text="Device Manager" FontWeight="SemiBold" FontSize="14" />
+                                        <TextBlock Text="Device Manager" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                         <TextBlock Text="مدیریت قطعات و سخت‌افزار" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                 </StackPanel>
@@ -392,7 +402,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="14">
                                     <FontIcon Glyph="&#xE713;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
                                     <StackPanel>
-                                        <TextBlock Text="Services" FontWeight="SemiBold" FontSize="14" />
+                                        <TextBlock Text="Services" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                         <TextBlock Text="سرویس‌های پس‌زمینه ویندوز" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                 </StackPanel>
@@ -402,7 +412,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="14">
                                     <FontIcon Glyph="&#xE9D9;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
                                     <StackPanel>
-                                        <TextBlock Text="Resource Monitor" FontWeight="SemiBold" FontSize="14" />
+                                        <TextBlock Text="Resource Monitor" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                         <TextBlock Text="پایش دقیق منابع و دیسک" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                 </StackPanel>
@@ -412,7 +422,7 @@
                                 <StackPanel Orientation="Horizontal" Spacing="14">
                                     <FontIcon Glyph="&#xE70F;" FontSize="24" Foreground="{ThemeResource AccentFillColorDefaultBrush}" />
                                     <StackPanel>
-                                        <TextBlock Text="Registry Editor" FontWeight="SemiBold" FontSize="14" />
+                                        <TextBlock Text="Registry Editor" FontWeight="SemiBold" FontSize="14" Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
                                         <TextBlock Text="ویرایشگر رجیستری ویندوز" FontSize="11" Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                                     </StackPanel>
                                 </StackPanel>

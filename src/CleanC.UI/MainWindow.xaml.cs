@@ -47,12 +47,12 @@ namespace CleanC.UI
             }
             catch { }
 
-            // Sync titlebar theme on window activation and actual theme change
+            // Sync titlebar theme and adaptive contrast on window activation and actual theme change
             this.Activated += (s, e) =>
             {
                 if (Content is FrameworkElement root)
                 {
-                    UpdateTitleBarTheme(root.ActualTheme);
+                    _ = RefreshAdaptiveThemeAsync(root.ActualTheme);
                 }
             };
 
@@ -60,8 +60,7 @@ namespace CleanC.UI
             {
                 rootElement.ActualThemeChanged += (s, e) =>
                 {
-                    UpdateTitleBarTheme(rootElement.ActualTheme);
-                    SwitchToTab(DashboardView.Visibility == Visibility.Visible, rootElement.ActualTheme);
+                    _ = RefreshAdaptiveThemeAsync(rootElement.ActualTheme);
                 };
 
                 rootElement.SizeChanged += (s, e) =>
@@ -123,6 +122,7 @@ namespace CleanC.UI
 
             // Initial load
             RefreshSystemStats();
+            _ = RefreshAdaptiveThemeAsync();
         }
 
         private AppWindow GetAppWindowForCurrentWindow()
@@ -162,6 +162,7 @@ namespace CleanC.UI
         private void UpdateTitleBarTheme(ElementTheme theme)
         {
             bool isDark = theme == ElementTheme.Dark;
+            bool useLightCaptionButtons = isDark || _isWallpaperDark;
 
             // Sync Win32 DWM Immersive Dark Mode with HWND
             try
@@ -185,7 +186,7 @@ namespace CleanC.UI
             titleBar.ButtonBackgroundColor = Colors.Transparent;
             titleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
 
-            if (isDark)
+            if (useLightCaptionButtons)
             {
                 titleBar.ButtonForegroundColor = Colors.White;
                 titleBar.ButtonInactiveForegroundColor = ColorHelper.FromArgb(140, 255, 255, 255);
@@ -922,24 +923,82 @@ namespace CleanC.UI
             ShowInfoBar("بروزرسانی شد", "اطلاعات مصرف رم، پردازنده و دیسک بروزرسانی شدند.", InfoBarSeverity.Informational);
         }
 
-        private void ThemeToggleBtn_Click(object sender, RoutedEventArgs e)
+        private async void ThemeToggleBtn_Click(object sender, RoutedEventArgs e)
         {
             if (Content is FrameworkElement root)
             {
                 ElementTheme newTheme = root.ActualTheme == ElementTheme.Dark ? ElementTheme.Light : ElementTheme.Dark;
                 root.RequestedTheme = newTheme;
                 ThemeIcon.Glyph = newTheme == ElementTheme.Dark ? "\uE708" : "\uE706";
-                UpdateTitleBarTheme(newTheme);
 
-                ConfigureSystemBackdrop();
+                await RefreshAdaptiveThemeAsync(newTheme);
 
                 if (_cachedScanResult != null)
                 {
                     RenderAdvancedGroups(_cachedScanResult);
                 }
-
-                SwitchToTab(DashboardView.Visibility == Visibility.Visible, newTheme);
             }
+        }
+
+        private bool _isWallpaperDark = false;
+
+        private async Task RefreshAdaptiveThemeAsync(ElementTheme? theme = null)
+        {
+            try
+            {
+                ElementTheme currentTheme = theme ?? 
+                    (Content is FrameworkElement root && root.ActualTheme != ElementTheme.Default 
+                        ? root.ActualTheme 
+                        : (Application.Current.RequestedTheme == ApplicationTheme.Dark ? ElementTheme.Dark : ElementTheme.Light));
+
+                _isWallpaperDark = await WallpaperService.IsWallpaperDarkAsync();
+                
+                bool isDark = currentTheme == ElementTheme.Dark;
+                bool useLightText = isDark || _isWallpaperDark;
+
+                var primaryColor = useLightText ? Colors.White : ColorHelper.FromArgb(255, 15, 23, 42);
+                var secondaryColor = useLightText ? ColorHelper.FromArgb(220, 241, 245, 249) : ColorHelper.FromArgb(255, 30, 41, 59);
+                var tertiaryColor = useLightText ? ColorHelper.FromArgb(170, 203, 213, 225) : ColorHelper.FromArgb(255, 51, 65, 85);
+
+                // 1. Mutate App.xaml Light Theme Dictionary brushes in-place
+                if (Application.Current.Resources.ThemeDictionaries.TryGetValue("Light", out var lightDictObj) &&
+                    lightDictObj is ResourceDictionary lightDict)
+                {
+                    string[] primaryBrushes = { "TextFillColorPrimaryBrush", "DefaultTextForegroundThemeBrush", "ButtonForeground", "ButtonForegroundPointerOver", "ButtonForegroundPressed" };
+                    foreach (var key in primaryBrushes)
+                    {
+                        if (lightDict.TryGetValue(key, out var bObj) && bObj is SolidColorBrush scb)
+                        {
+                            scb.Color = primaryColor;
+                        }
+                    }
+
+                    if (lightDict.TryGetValue("TextFillColorSecondaryBrush", out var secObj) && secObj is SolidColorBrush secBrush)
+                    {
+                        secBrush.Color = secondaryColor;
+                    }
+                    if (lightDict.TryGetValue("TextFillColorTertiaryBrush", out var tertObj) && tertObj is SolidColorBrush tertBrush)
+                    {
+                        tertBrush.Color = tertiaryColor;
+                    }
+                }
+
+                // 2. Also register on root element resources for instant visual tree inheritance
+                if (Content is FrameworkElement rootElem)
+                {
+                    rootElem.Resources["TextFillColorPrimaryBrush"] = new SolidColorBrush(primaryColor);
+                    rootElem.Resources["DefaultTextForegroundThemeBrush"] = new SolidColorBrush(primaryColor);
+                    rootElem.Resources["ButtonForeground"] = new SolidColorBrush(primaryColor);
+                    rootElem.Resources["ButtonForegroundPointerOver"] = new SolidColorBrush(primaryColor);
+                    rootElem.Resources["ButtonForegroundPressed"] = new SolidColorBrush(primaryColor);
+                    rootElem.Resources["TextFillColorSecondaryBrush"] = new SolidColorBrush(secondaryColor);
+                    rootElem.Resources["TextFillColorTertiaryBrush"] = new SolidColorBrush(tertiaryColor);
+                }
+
+                UpdateTitleBarTheme(currentTheme);
+                SwitchToTab(DashboardView.Visibility == Visibility.Visible, currentTheme);
+            }
+            catch { }
         }
 
         private void SwitchToTab(bool isDashboard, ElementTheme? overrideTheme = null)
@@ -962,6 +1021,7 @@ namespace CleanC.UI
             }
 
             bool isDark = currentTheme == ElementTheme.Dark;
+            bool useLightText = isDark || _isWallpaperDark;
 
             // Frosted glass active tab background matching theme
             var activeBg = isDark 
@@ -974,9 +1034,17 @@ namespace CleanC.UI
                 ? new SolidColorBrush(Colors.White) 
                 : new SolidColorBrush(ColorHelper.FromArgb(255, 15, 23, 42));
 
-            var inactiveText = isDark 
-                ? new SolidColorBrush(ColorHelper.FromArgb(170, 255, 255, 255)) 
+            var inactiveText = useLightText 
+                ? new SolidColorBrush(ColorHelper.FromArgb(220, 255, 255, 255)) 
                 : new SolidColorBrush(ColorHelper.FromArgb(255, 15, 23, 42));
+
+            var inactiveBg = useLightText
+                ? new SolidColorBrush(ColorHelper.FromArgb(35, 255, 255, 255))
+                : new SolidColorBrush(ColorHelper.FromArgb(25, 0, 0, 0));
+
+            var inactiveBorder = useLightText
+                ? new SolidColorBrush(ColorHelper.FromArgb(50, 255, 255, 255))
+                : new SolidColorBrush(ColorHelper.FromArgb(30, 0, 0, 0));
 
             var accentBrush = (Brush)Application.Current.Resources["AccentFillColorDefaultBrush"];
 
@@ -989,12 +1057,8 @@ namespace CleanC.UI
                 NavDashboardText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
                 NavDashboardText.Foreground = activeText;
 
-                NavToolsBtn.Background = isDark 
-                    ? new SolidColorBrush(Colors.Transparent) 
-                    : new SolidColorBrush(ColorHelper.FromArgb(45, 255, 255, 255));
-                NavToolsBtn.BorderBrush = isDark 
-                    ? new SolidColorBrush(Colors.Transparent) 
-                    : new SolidColorBrush(ColorHelper.FromArgb(60, 255, 255, 255));
+                NavToolsBtn.Background = isDark ? new SolidColorBrush(Colors.Transparent) : inactiveBg;
+                NavToolsBtn.BorderBrush = isDark ? new SolidColorBrush(Colors.Transparent) : inactiveBorder;
                 NavToolsBtn.BorderThickness = isDark ? new Thickness(0) : new Thickness(1);
                 NavToolsIcon.Foreground = inactiveText;
                 NavToolsText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
@@ -1009,12 +1073,8 @@ namespace CleanC.UI
                 NavToolsText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
                 NavToolsText.Foreground = activeText;
 
-                NavDashboardBtn.Background = isDark 
-                    ? new SolidColorBrush(Colors.Transparent) 
-                    : new SolidColorBrush(ColorHelper.FromArgb(45, 255, 255, 255));
-                NavDashboardBtn.BorderBrush = isDark 
-                    ? new SolidColorBrush(Colors.Transparent) 
-                    : new SolidColorBrush(ColorHelper.FromArgb(60, 255, 255, 255));
+                NavDashboardBtn.Background = isDark ? new SolidColorBrush(Colors.Transparent) : inactiveBg;
+                NavDashboardBtn.BorderBrush = isDark ? new SolidColorBrush(Colors.Transparent) : inactiveBorder;
                 NavDashboardBtn.BorderThickness = isDark ? new Thickness(0) : new Thickness(1);
                 NavDashboardIcon.Foreground = inactiveText;
                 NavDashboardText.FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
