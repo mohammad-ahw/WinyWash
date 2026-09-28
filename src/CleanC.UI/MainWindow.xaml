@@ -152,26 +152,16 @@
                                         </StackPanel>
                                     </Grid>
 
-                                    <!-- Professional Boost Button -->
+                                    <!-- Professional Boost Button (Adapts to Windows Wallpaper Accent Color) -->
                                     <Button x:Name="QuickBoostBtn" 
                                             Click="QuickBoostBtn_Click" 
-                                            Background="{StaticResource BoostGradientBrush}"
-                                            Foreground="White"
-                                            BorderBrush="{StaticResource BoostBorderBrush}"
-                                            BorderThickness="1"
+                                            Style="{ThemeResource AccentButtonStyle}"
                                             CornerRadius="9" 
                                             Height="48"
                                             Padding="22,0">
-                                        <Button.Resources>
-                                            <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="#0078D4" />
-                                            <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="#005A9E" />
-                                            <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="White" />
-                                            <SolidColorBrush x:Key="ButtonForegroundPressed" Color="White" />
-                                            <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="#60A5FA" />
-                                        </Button.Resources>
                                         <StackPanel Orientation="Horizontal" Spacing="9" VerticalAlignment="Center">
-                                            <FontIcon x:Name="QuickBoostBtnIcon" Glyph="&#xE777;" FontSize="16" Foreground="White" />
-                                            <TextBlock x:Name="QuickBoostBtnText" Text="بهینه‌سازی و ارتقای سرعت سیستم" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                                            <FontIcon x:Name="QuickBoostBtnIcon" Glyph="&#xE777;" FontSize="16" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                                            <TextBlock x:Name="QuickBoostBtnText" Text="بهینه‌سازی و ارتقای سرعت سیستم" FontSize="13" FontWeight="SemiBold" Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
                                         </StackPanel>
                                     </Button>
                                 </StackPanel>

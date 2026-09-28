@@ -64,7 +64,7 @@
                     <SolidColorBrush x:Key="ButtonForegroundPressed" Color="#FFFFFF" />
                     
                     <!-- Frosted Dark Card: sleek dark slate allowing acrylic blur to shine through -->
-                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#4D1E1E1E" />
+                    <SolidColorBrush x:Key="AppCardBackgroundBrush" Color="#661A1A1A" />
                     <!-- Subtle inner highlight via gradient border -->
                     <LinearGradientBrush x:Key="AppCardBorderBrush" StartPoint="0,0" EndPoint="0,1">
                         <GradientStop Color="#45FFFFFF" Offset="0.0" />

@@ -252,8 +252,8 @@ namespace CleanC.UI
                     if (isDark)
                     {
                         _acrylicController.TintColor = Windows.UI.Color.FromArgb(255, 20, 20, 20);
-                        _acrylicController.TintOpacity = 0.28f;
-                        _acrylicController.LuminosityOpacity = 0.65f;
+                        _acrylicController.TintOpacity = _isWallpaperDark ? 0.28f : 0.52f;
+                        _acrylicController.LuminosityOpacity = _isWallpaperDark ? 0.65f : 0.85f;
                     }
                     else
                     {
